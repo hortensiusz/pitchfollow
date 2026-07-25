@@ -2,7 +2,8 @@
 import React from 'react';
 import { useStore } from '@/lib/store';
 import { t } from '@/lib/i18n';
-import type { QuoteRow } from '@/lib/types';
+import type { QuoteRow, QuoteState } from '@/lib/types';
+import type { CalcResult } from '@/lib/quoteCalc';
 import { Card } from './ui/Card';
 import { calcQuote, formatMoney, rowOneNet, calcP1Default, calcP2Default } from '@/lib/quoteCalc';
 
@@ -218,8 +219,13 @@ export default function QuoteSection() {
         </label>
       </div>
 
-      {/* Totals */}
-      {q.rows.some(r => r.name) && (
+      {/* Side-by-side option cards (shown when term = both) */}
+      {q.term === 'both' && q.rows.some(r => r.name) && (
+        <BothOptionsCards q={q} result={result} money={money} />
+      )}
+
+      {/* Totals (stacked summary — hidden when both-cards are shown) */}
+      {(q.term as string) !== 'both' && q.rows.some(r => r.name) && (
         <div className="mt-3 flex flex-col items-end gap-0.5 text-sm">
 
           {/* 1-year option (shown for term=1y and term=both) */}
@@ -303,6 +309,83 @@ function TotalsBlock({ heading, totalLabel, sub, gd, afterDisc, vat, total, vatO
         <span className="font-semibold">{totalLabel}</span>
         <strong className="text-[#1e3a5f]">{money(total)}</strong>
       </div>
+    </div>
+  );
+}
+
+// Side-by-side option cards for term='both'
+function BothOptionsCards({ q, result, money }: { q: QuoteState; result: CalcResult; money: (n: number) => string }) {
+  const rows = q.rows.filter(r => r.name);
+  const baseYear = new Date().getFullYear();
+
+  const rowY1Net = (r: QuoteRow) => rowOneNet(r);
+  const rowY1in2Net = (r: QuoteRow): number => {
+    if (r.p2y1manual && typeof r.p2y1 === 'number') return (r.flat ? r.p2y1 : r.qty * r.p2y1) * (1 - r.disc / 100);
+    const p1u = calcP1Default(r, q.twoYrDisc);
+    return typeof p1u === 'number' ? (r.flat ? p1u : r.qty * p1u) : rowOneNet(r);
+  };
+  const rowY2Net = (r: QuoteRow): number => {
+    if (r.y2manual && typeof r.p2 === 'number') return (r.flat ? r.p2 : r.qty * r.p2) * (1 - r.disc / 100);
+    const p1u = calcP1Default(r, q.twoYrDisc);
+    if (typeof p1u !== 'number') return 0;
+    const eff = typeof r.up === 'number' ? r.up : q.y2Uplift;
+    const p2u = calcP2Default(p1u, eff);
+    return typeof p2u === 'number' ? (r.flat ? p2u : r.qty * p2u) : 0;
+  };
+
+  const CardBox = ({ title, children }: { title: string; children: React.ReactNode }) => (
+    <div className="flex-1 min-w-0 rounded-xl border border-gray-200 overflow-hidden">
+      <div className="bg-[#1e3a5f] text-white text-sm font-semibold px-4 py-2.5">{title}</div>
+      <div className="p-4 text-sm space-y-2">{children}</div>
+    </div>
+  );
+
+  return (
+    <div className="mt-4 flex gap-3 overflow-x-auto pb-1">
+      {/* Option 1: 1-year */}
+      <CardBox title="Option 1 — 1-year">
+        <div className="space-y-1.5">
+          {rows.map((r, i) => (
+            <div key={i} className="flex justify-between gap-3">
+              <span className="text-gray-700 truncate">{r.name}{r.flat ? ` (${r.qty} depts)` : ''}</span>
+              <span className="text-[#1e3a5f] font-medium whitespace-nowrap">{money(rowY1Net(r))}</span>
+            </div>
+          ))}
+        </div>
+        <div className="border-t border-gray-200 pt-2 mt-2 space-y-0.5">
+          {q.gd > 0 && <div className="flex justify-between text-gray-400 text-xs"><span>Discount ({q.gd}%)</span><span>−{money(result.sub - result.afterDisc)}</span></div>}
+          {q.vat && <div className="flex justify-between text-gray-400 text-xs"><span>VAT (20%)</span><span>+{money(result.vat)}</span></div>}
+          <div className="flex justify-between font-bold text-[#1e3a5f] pt-1">
+            <span>Total</span><span>{money(result.total)}</span>
+          </div>
+        </div>
+      </CardBox>
+
+      {/* Option 2: 2-year */}
+      <CardBox title="Option 2 — 2-year contract">
+        <div className="space-y-2">
+          {rows.map((r, i) => (
+            <div key={i}>
+              <div className="text-gray-700 font-medium truncate">{r.name}{r.flat ? ` (${r.qty} depts)` : ''}</div>
+              <div className="flex justify-between text-gray-500 text-xs pl-2">
+                <span>{baseYear}</span><span>{money(rowY1in2Net(r))}</span>
+              </div>
+              <div className="flex justify-between text-gray-500 text-xs pl-2">
+                <span>{baseYear + 1}</span><span>{money(rowY2Net(r))}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="border-t border-gray-200 pt-2 mt-2 space-y-0.5">
+          {q.gd > 0 && <div className="flex justify-between text-gray-400 text-xs"><span>Discount ({q.gd}%)</span><span>−{money((result.sub + result.sub2) - (result.afterDisc + result.afterDisc2))}</span></div>}
+          {q.vat && <div className="flex justify-between text-gray-400 text-xs"><span>VAT (20%)</span><span>+{money(result.vat + result.vat2)}</span></div>}
+          <div className="flex justify-between text-gray-500 text-xs"><span>Year 1 total</span><span>{money(result.total)}</span></div>
+          <div className="flex justify-between text-gray-500 text-xs"><span>Year 2 total</span><span>{money(result.total2)}</span></div>
+          <div className="flex justify-between font-bold text-[#1e3a5f] pt-1">
+            <span>2-year total</span><span>{money(result.grand2y)}</span>
+          </div>
+        </div>
+      </CardBox>
     </div>
   );
 }
