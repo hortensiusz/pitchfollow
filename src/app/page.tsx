@@ -9,6 +9,7 @@ import BasicInfoSection from '@/components/BasicInfoSection';
 import MeetingNotesSection from '@/components/MeetingNotesSection';
 import ContentSection from '@/components/ContentSection';
 import QuoteSection from '@/components/QuoteSection';
+import CalcSection from '@/components/CalcSection';
 import AiSettingsDialog from '@/components/dialogs/AiSettingsDialog';
 import PriceListDialog from '@/components/dialogs/PriceListDialog';
 import OutputPanel from '@/components/dialogs/OutputPanel';
@@ -198,6 +199,7 @@ export default function Home() {
           <MatchResult results={matchHits} onClose={() => setShowMatch(false)} />
         )}
         {SECTION_DEFS.map(def => <ContentSection key={def.id} def={def} />)}
+        <CalcSection />
         <QuoteSection />
         {panel && (
           <OutputPanel kind={panel} title={panelTitle} hint={panelHint}
