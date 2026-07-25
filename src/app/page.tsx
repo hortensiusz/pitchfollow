@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useStore } from '@/lib/store';
 import { t, SECTION_DEFS } from '@/lib/i18n';
 import { aiComplete } from '@/lib/aiService';
@@ -23,6 +23,7 @@ export default function Home() {
   const { app, setSectionItems, setSection, setContacts, priceList, uiLang, setStatus, saveState, loadState, resetAll } = store;
   const T = useCallback((k: Parameters<typeof t>[0]) => t(k, uiLang), [uiLang]);
 
+  const panelRef = useRef<HTMLDivElement>(null);
   const [showPrices, setShowPrices] = useState(false);
   const [panel, setPanel] = useState<PanelKind>(null);
   const [panelTitle, setPanelTitle] = useState('');
@@ -32,6 +33,9 @@ export default function Home() {
   const [showMatch, setShowMatch] = useState(false);
 
   useEffect(() => { loadState(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (panel) panelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [panel]);
 
   const collectContext = useCallback(() => {
     const L: string[] = [];
@@ -188,9 +192,11 @@ export default function Home() {
         <CalcSection />
         <QuoteSection />
         {panel && (
-          <OutputPanel kind={panel} title={panelTitle} hint={panelHint}
-            content={panelContent as string | [string, string, string]}
-            onClose={() => setPanel(null)} />
+          <div ref={panelRef}>
+            <OutputPanel kind={panel} title={panelTitle} hint={panelHint}
+              content={panelContent as string | [string, string, string]}
+              onClose={() => setPanel(null)} />
+          </div>
         )}
       </main>
 
