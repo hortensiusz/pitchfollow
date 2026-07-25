@@ -3,8 +3,8 @@ import { useStore } from '@/lib/store';
 import { t, LANG_LABELS } from '@/lib/i18n';
 import type { LangCode, CurrencyCode } from '@/lib/types';
 import { Card } from './ui/Card';
-import { useCallback, useEffect, useState } from 'react';
-import { ensureFy27Data, searchFirms } from '@/lib/fy27data';
+import { useCallback } from 'react';
+import FirmSearchInput from './FirmSearchInput';
 
 const LANGS: LangCode[] = ['en', 'zh', 'zhTW', 'fr', 'de', 'ptBR'];
 const CURRENCIES: CurrencyCode[] = ['£', '$', '€', '¥'];
@@ -19,26 +19,6 @@ export default function BasicInfoSection({ onExtractContacts }: Props) {
   const T = (k: Parameters<typeof t>[0]) => t(k, uiLang);
   const save = useCallback(() => saveState(), [saveState]);
 
-  const [clientSugs, setClientSugs] = useState<string[]>([]);
-  const [firmsReady, setFirmsReady] = useState(false);
-
-  useEffect(() => {
-    ensureFy27Data(() => setFirmsReady(true));
-  }, []);
-
-  const handleClientInput = (val: string) => {
-    setApp({ client: val });
-    save();
-    setClientSugs(firmsReady ? searchFirms(val).map(f => f.n) : []);
-  };
-
-  // Re-search when data finishes loading if field already has text
-  useEffect(() => {
-    if (firmsReady && app.client.length >= 2) {
-      setClientSugs(searchFirms(app.client).map(f => f.n));
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [firmsReady]);
 
   const handleContactChange = (i: number, val: string) => {
     const c = [...app.contacts];
@@ -64,22 +44,14 @@ export default function BasicInfoSection({ onExtractContacts }: Props) {
       </h2>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
         {/* Client */}
-        <div>
-          <label className="field-label">
-            {T('lblClient')}
-            {!firmsReady && <span className="ml-1 text-gray-300 font-normal text-xs">loading…</span>}
-          </label>
-          <input
-            type="text"
-            list="client-firms-list"
-            className="field-input"
+        <div className="relative">
+          <label className="field-label">{T('lblClient')}</label>
+          <FirmSearchInput
             value={app.client}
+            onChange={name => { setApp({ client: name }); save(); }}
             placeholder={T('phClient')}
-            onChange={e => handleClientInput(e.target.value)}
+            className="field-input"
           />
-          <datalist id="client-firms-list">
-            {clientSugs.map(name => <option key={name} value={name} />)}
-          </datalist>
         </div>
 
         {/* Meeting date */}
