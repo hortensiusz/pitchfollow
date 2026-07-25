@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useStore } from '@/lib/store';
 import { t, SECTION_DEFS } from '@/lib/i18n';
-import { aiComplete } from '@/lib/aiService';
+import { aiComplete, parseAiJson } from '@/lib/aiService';
 
 import AppHeader from '@/components/AppHeader';
 import BasicInfoSection from '@/components/BasicInfoSection';
@@ -72,9 +72,7 @@ export default function Home() {
     const sys = `You are a Chambers (legal intelligence firm) sales advisor writing bullet points for a client-facing follow-up PPT. Write in a professional, client-centric tone. Generate 2-5 points per section. Output ONLY valid JSON, no code fences. All points must be in ${outLang}.`;
     const user = `Meeting notes:\n${app.notes}\n\nGenerate client-facing follow-up points as JSON:\n{"recap":[],"needs":[],"solution":[],"next":[]}\nrecap=meeting recap; needs=client requirements; solution=proposed solution; next=next steps`;
     try {
-      const raw = (await aiComplete(sys, user)).trim().replace(/^```(json)?\s*/i, '').replace(/```\s*$/, '');
-      const m = raw.match(/\{[\s\S]*\}/);
-      const d = JSON.parse(m ? m[0] : raw);
+      const d = parseAiJson(await aiComplete(sys, user)) as Record<string, unknown>;
       let filled = 0;
       SECTION_DEFS.forEach(def => {
         const arr = d[def.id];
@@ -110,9 +108,7 @@ export default function Home() {
     const sys = 'Identify client-side attendee names from a sales meeting transcript. Only client names (not Chambers staff). Output ONLY a JSON string array, nothing else.';
     const user = `Meeting notes:\n${app.notes}\n\nOutput client contact names, e.g. ["Jane Smith","John Doe"]. Output [] if none found.`;
     try {
-      const raw = (await aiComplete(sys, user)).trim().replace(/^```(json)?\s*/i, '').replace(/```\s*$/, '');
-      const m = raw.match(/\[[\s\S]*\]/);
-      const arr: string[] = JSON.parse(m ? m[0] : raw);
+      const arr = parseAiJson(await aiComplete(sys, user)) as string[];
       if (Array.isArray(arr) && arr.filter(Boolean).length) {
         const existing = new Set(app.contacts.filter(Boolean));
         const merged = [...app.contacts.filter(Boolean)];
