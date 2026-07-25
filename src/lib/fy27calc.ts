@@ -19,8 +19,8 @@ export interface FirmRecord {
   e: FirmEntry[];
 }
 
-// e-column indices: [0]=guide,[1]=seg,[2]=country,[3]=state,[4-5]=unused,[6]=idep,[7]=nb,[8]=inf,[9]=an,[10]=iren,[11]=ren
-export type FirmEntry = [string, string, string, string | null, number, number, number, number, number, number, number, RenewArr | null];
+// e-column indices: [0]=guide,[1]=seg,[2]=country,[3]=state,[4-5]=unused,[6]=idep,[7]=nb,[8]=inf,[9]=an,[10]=iren,[11]=ren,[12]=fy26
+export type FirmEntry = [string, string, string, string | null, number, number, number, number, number, number, number, RenewArr | null, number | null];
 type RenewArr = [number, ...number[]]; // [max, p0,r0,m0, p1,r1,m1, ...]
 
 export interface CalcChecks {
@@ -41,6 +41,7 @@ export interface CalcRow {
   hi: number;
   extra: string;
   isFlat: boolean;
+  fy26: number | null;
 }
 
 const GUIDE_MAP: Record<string, string> = {
@@ -81,7 +82,7 @@ export function calcPricing(
   mode: 'ci' | 'cmi',
   depN: number,
 ): CalcRow[] {
-  const [guide, seg, country, state, , , idep, nb, inf, an, iren, ren] = en;
+  const [guide, seg, country, state, , , idep, nb, inf, an, iren, ren, fy26] = en;
   const band = rc.countryBands[country] ?? DEFAULT_BAND;
   const k = deriveScen(checks);
   const rows: CalcRow[] = [];
@@ -93,7 +94,7 @@ export function calcPricing(
     const man = ren[3 + 3 * k] as number;
     const max = ren[0] as number;
     if (pitch) {
-      rows.push({ id: 'plat', n: 'Profile Platform (renewal)', cname: 'Profile Platform (annual)', pitch, rep, lo: man, hi: max, extra: '', isFlat: false });
+      rows.push({ id: 'plat', n: 'Profile Platform (renewal)', cname: 'Profile Platform (annual)', pitch, rep, lo: man, hi: max, extra: '', isFlat: false, fy26: fy26 ?? null });
     }
   } else if (nb > 0) {
     const up = state && rc.usaStateUplift[state] ? rc.usaStateUplift[state] : 0;
@@ -102,7 +103,7 @@ export function calcPricing(
       id: 'plat', n: 'Profile Platform (new)', cname: 'Profile Platform (annual)',
       pitch, rep: Math.round(pitch * (1 - band.nbRepDisc)),
       lo: Math.round(pitch * (1 - band.nbManDisc)), hi: Math.round(pitch * 1.2),
-      extra: band.band, isFlat: false,
+      extra: band.band, isFlat: false, fy26: fy26 ?? null,
     });
   }
 
@@ -111,7 +112,7 @@ export function calcPricing(
   if (iren > 0 && idep > 0 && safeDepN === idep) {
     rows.push({
       id: 'ins', n: `Insight (renewal · ${idep} dep)`, cname: mode === 'cmi' ? 'Chambers Insight - CMI Report' : 'Chambers Insight - CI Report',
-      pitch: iren, rep: iren, lo: iren, hi: Math.round(iren * 1.2), extra: '', isFlat: true,
+      pitch: iren, rep: iren, lo: iren, hi: Math.round(iren * 1.2), extra: '', isFlat: true, fy26: null,
     });
   } else {
     let pitch: number | null = null;
@@ -129,7 +130,7 @@ export function calcPricing(
         id: 'ins', n: `Insight ${mode.toUpperCase()} (${safeDepN} dep)`,
         cname: mode === 'cmi' ? 'Chambers Insight - CMI Report' : 'Chambers Insight - CI Report',
         pitch, rep: r100(pitch * 0.9), lo: r100(pitch * 0.85), hi: r100(pitch * 1.2),
-        extra: approxTag, isFlat: true,
+        extra: approxTag, isFlat: true, fy26: null,
       });
     }
   }
@@ -141,13 +142,13 @@ export function calcPricing(
       id: 'mp', n: `Market Pulse (${seg})`, cname: 'Market Pulse (annual)',
       pitch: mpPrice, rep: Math.round(mpPrice * rc.marketPulse.minPct),
       lo: Math.round(mpPrice * rc.marketPulse.minPct), hi: Math.round(mpPrice * rc.marketPulse.maxPct),
-      extra: '', isFlat: false,
+      extra: '', isFlat: false, fy26: null,
     });
   }
 
   // Analytics
   if (an > 0) {
-    rows.push({ id: 'an', n: 'Practice Analytics', cname: 'Practice Analytics', pitch: an, rep: an, lo: an, hi: an, extra: '', isFlat: false });
+    rows.push({ id: 'an', n: 'Practice Analytics', cname: 'Practice Analytics', pitch: an, rep: an, lo: an, hi: an, extra: '', isFlat: false, fy26: null });
   }
 
   // In-Depth Overview
@@ -160,7 +161,7 @@ export function calcPricing(
       const pitch = Math.round(pa * (1 - pct));
       let extra = `${band.band} −${Math.round(pct * 100)}%`;
       if (full) extra += `  |  Country: £${Math.round(full * (1 - pct)).toLocaleString()}`;
-      rows.push({ id: 'ov', n: `In-Depth Overview (${og})`, cname: 'In-Depth Overview (annual)', pitch, rep: pitch, lo: pitch, hi: Math.round(pa), extra, isFlat: false });
+      rows.push({ id: 'ov', n: `In-Depth Overview (${og})`, cname: 'In-Depth Overview (annual)', pitch, rep: pitch, lo: pitch, hi: Math.round(pa), extra, isFlat: false, fy26: null });
     }
   }
 

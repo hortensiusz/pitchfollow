@@ -1,17 +1,15 @@
 'use client';
-import React from 'react';
 import { useStore } from '@/lib/store';
 import { t } from '@/lib/i18n';
-import type { QuoteRow, QuoteState } from '@/lib/types';
-import type { CalcResult } from '@/lib/quoteCalc';
+import type { QuoteRow } from '@/lib/types';
 import { Card } from './ui/Card';
-import { calcQuote, formatMoney, rowOneNet, calcP1Default, calcP2Default } from '@/lib/quoteCalc';
+import { calcQuote, formatMoney, rowOneNet } from '@/lib/quoteCalc';
 
 export default function QuoteSection() {
   const { app, setQuote, addQuoteRow, updateQuoteRow, removeQuoteRow, priceList, uiLang, saveState } = useStore();
   const T = (k: Parameters<typeof t>[0]) => t(k, uiLang);
   const q = app.quote;
-  const twoYear = q.term !== '1y';
+  const showTwoYrControls = q.term !== '1y';
   const result = calcQuote(q);
   const cur = app.currency;
   const money = (n: number) => formatMoney(n, cur);
@@ -69,7 +67,7 @@ export default function QuoteSection() {
             {termOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
         </div>
-        {twoYear && (
+        {showTwoYrControls && (
           <>
             <div>
               <label className="field-label">{T('lblTwoYrDisc')}</label>
@@ -90,31 +88,17 @@ export default function QuoteSection() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-200 text-gray-400 text-left">
-              <th className="py-2 px-2 font-medium w-[28%]">{T('thItem')}</th>
-              <th className="py-2 px-2 font-medium w-[7%]">{T('thQty')}</th>
-              <th className="py-2 px-2 font-medium w-[12%]">{T('thPrice')}</th>
-              <th className="py-2 px-2 font-medium w-[9%]">{T('thDisc')}</th>
-              <th className="py-2 px-2 font-medium text-right w-[12%]">{T('thSub')}</th>
-              {twoYear && <>
-                <th className="py-2 px-2 font-medium w-[12%]">{T('thY2a')}</th>
-                <th className="py-2 px-2 font-medium w-[9%]">{T('thY2up')}</th>
-                <th className="py-2 px-2 font-medium w-[12%]">{T('thY2b')}</th>
-              </>}
-              <th className="py-2 px-2 w-[5%]"></th>
+              <th className="py-2 px-2 font-medium w-[36%]">{T('thItem')}</th>
+              <th className="py-2 px-2 font-medium w-[10%]">{T('thQty')}</th>
+              <th className="py-2 px-2 font-medium w-[16%]">{T('thPrice')}</th>
+              <th className="py-2 px-2 font-medium w-[12%]">{T('thDisc')}</th>
+              <th className="py-2 px-2 font-medium text-right w-[20%]">{T('thSub')}</th>
+              <th className="py-2 px-2 w-[6%]"></th>
             </tr>
           </thead>
           <tbody>
             {q.rows.map((r, i) => {
               const sub = rowOneNet(r);
-              const p1val = typeof r.p2y1 === 'number' ? r.p2y1 : (calcP1Default(r, q.twoYrDisc) as number | '');
-              // Fix 5: use per-row uplift if set, otherwise global
-              const effectiveUplift = typeof r.up === 'number' ? r.up : q.y2Uplift;
-              // Fix 5: only use stored p2 when manually edited; otherwise always recalculate from uplift
-              const p2val = (r.y2manual && typeof r.p2 === 'number')
-                ? r.p2
-                : (typeof p1val === 'number' ? calcP2Default(p1val, effectiveUplift) : '');
-              const p2below = twoYear && typeof p2val === 'number' && typeof p1val === 'number' && p2val < p1val;
-
               return (
                 <tr key={i} className="border-b border-gray-100">
                   <td className="py-1 px-2">
@@ -126,12 +110,10 @@ export default function QuoteSection() {
                       placeholder={T('phRowName')}
                       onChange={e => handleNameChange(i, e.target.value)}
                     />
-                    {/* Fix 3: show guide */}
                     {r.guide && <div className="text-xs text-gray-400 mt-0.5">Guide: {r.guide}</div>}
                     {r.parts && r.parts.length > 0 && (
                       <div className="text-xs text-gray-400 mt-0.5">Bundle: {r.parts.join(' / ')}</div>
                     )}
-                    {/* Fix 4: show dept count for flat-priced (Insight) rows */}
                     {r.flat && <div className="text-xs text-gray-400 mt-0.5">Flat total · {r.qty} dept{r.qty !== 1 ? 's' : ''}</div>}
                   </td>
                   <td className="py-1 px-2">
@@ -153,31 +135,6 @@ export default function QuoteSection() {
                   <td className="py-1 px-2 text-right font-medium text-[#1e3a5f]">
                     {r.name || r.qty ? money(sub) : '—'}
                   </td>
-                  {twoYear && <>
-                    <td className="py-1 px-2">
-                      <input type="number" className="field-input w-full text-sm" min={0} step={0.01}
-                        value={r.p2y1manual && typeof r.p2y1 === 'number' ? r.p2y1 : (typeof p1val === 'number' ? p1val : '')}
-                        onChange={e => updateRow(i, { p2y1: +e.target.value, p2y1manual: true })}
-                        placeholder={typeof p1val === 'number' ? String(p1val) : ''}
-                      />
-                    </td>
-                    <td className="py-1 px-2">
-                      <input type="number" className="field-input w-full text-sm" min={0} step={0.5}
-                        value={r.up !== '' ? r.up : ''}
-                        placeholder={String(q.y2Uplift)}
-                        onChange={e => updateRow(i, { up: e.target.value !== '' ? +e.target.value : '', y2manual: false })}
-                      />
-                    </td>
-                    <td className="py-1 px-2">
-                      <input type="number" className={`field-input w-full text-sm ${p2below ? 'border-red-400' : ''}`}
-                        min={0} step={0.01}
-                        value={typeof p2val === 'number' ? p2val : ''}
-                        onChange={e => updateRow(i, { p2: +e.target.value, y2manual: true })}
-                        placeholder={typeof p2val === 'number' ? String(p2val) : ''}
-                      />
-                      {p2below && <div className="text-red-500 text-xs mt-0.5">{T('warnBelowY1')}</div>}
-                    </td>
-                  </>}
                   <td className="py-1 px-2">
                     <button onClick={() => { removeQuoteRow(i); saveState(); }}
                       className="text-gray-300 hover:text-red-500 text-lg px-1">✕</button>
@@ -219,17 +176,10 @@ export default function QuoteSection() {
         </label>
       </div>
 
-      {/* Side-by-side option cards (shown when term = both) */}
-      {q.term === 'both' && q.rows.some(r => r.name) && (
-        <BothOptionsCards q={q} result={result} money={money} />
-      )}
-
-      {/* Totals (stacked summary — hidden when both-cards are shown) */}
-      {(q.term as string) !== 'both' && q.rows.some(r => r.name) && (
+      {/* Totals */}
+      {q.rows.some(r => r.name) && (
         <div className="mt-3 flex flex-col items-end gap-0.5 text-sm">
-
-          {/* 1-year option (shown for term=1y and term=both) */}
-          {(q.term === '1y' || q.term === 'both') && (
+          {q.term !== '2y' && (
             <TotalsBlock
               heading={q.term === 'both' ? '1-YEAR OPTION' : undefined}
               totalLabel="Year 1 total:"
@@ -237,9 +187,7 @@ export default function QuoteSection() {
               vat={result.vat} total={result.total} vatOn={q.vat} money={money}
             />
           )}
-
-          {/* 2-year contract (shown for term=2y and term=both) */}
-          {twoYear && (
+          {showTwoYrControls && (
             <div className="mt-3 flex flex-col items-end gap-0.5">
               {q.term === 'both' && (
                 <div className="text-xs text-gray-400 font-medium uppercase tracking-wide mb-1 min-w-[280px] text-right">
@@ -313,79 +261,3 @@ function TotalsBlock({ heading, totalLabel, sub, gd, afterDisc, vat, total, vatO
   );
 }
 
-// Side-by-side option cards for term='both'
-function BothOptionsCards({ q, result, money }: { q: QuoteState; result: CalcResult; money: (n: number) => string }) {
-  const rows = q.rows.filter(r => r.name);
-  const baseYear = new Date().getFullYear();
-
-  const rowY1Net = (r: QuoteRow) => rowOneNet(r);
-  const rowY1in2Net = (r: QuoteRow): number => {
-    if (r.p2y1manual && typeof r.p2y1 === 'number') return (r.flat ? r.p2y1 : r.qty * r.p2y1) * (1 - r.disc / 100);
-    const p1u = calcP1Default(r, q.twoYrDisc);
-    return typeof p1u === 'number' ? (r.flat ? p1u : r.qty * p1u) : rowOneNet(r);
-  };
-  const rowY2Net = (r: QuoteRow): number => {
-    if (r.y2manual && typeof r.p2 === 'number') return (r.flat ? r.p2 : r.qty * r.p2) * (1 - r.disc / 100);
-    const p1u = calcP1Default(r, q.twoYrDisc);
-    if (typeof p1u !== 'number') return 0;
-    const eff = typeof r.up === 'number' ? r.up : q.y2Uplift;
-    const p2u = calcP2Default(p1u, eff);
-    return typeof p2u === 'number' ? (r.flat ? p2u : r.qty * p2u) : 0;
-  };
-
-  const CardBox = ({ title, children }: { title: string; children: React.ReactNode }) => (
-    <div className="flex-1 min-w-0 rounded-xl border border-gray-200 overflow-hidden">
-      <div className="bg-[#1e3a5f] text-white text-sm font-semibold px-4 py-2.5">{title}</div>
-      <div className="p-4 text-sm space-y-2">{children}</div>
-    </div>
-  );
-
-  return (
-    <div className="mt-4 flex gap-3 overflow-x-auto pb-1">
-      {/* Option 1: 1-year */}
-      <CardBox title="Option 1 — 1-year">
-        <div className="space-y-1.5">
-          {rows.map((r, i) => (
-            <div key={i} className="flex justify-between gap-3">
-              <span className="text-gray-700 truncate">{r.name}{r.flat ? ` (${r.qty} depts)` : ''}</span>
-              <span className="text-[#1e3a5f] font-medium whitespace-nowrap">{money(rowY1Net(r))}</span>
-            </div>
-          ))}
-        </div>
-        <div className="border-t border-gray-200 pt-2 mt-2 space-y-0.5">
-          {q.gd > 0 && <div className="flex justify-between text-gray-400 text-xs"><span>Discount ({q.gd}%)</span><span>−{money(result.sub - result.afterDisc)}</span></div>}
-          {q.vat && <div className="flex justify-between text-gray-400 text-xs"><span>VAT (20%)</span><span>+{money(result.vat)}</span></div>}
-          <div className="flex justify-between font-bold text-[#1e3a5f] pt-1">
-            <span>Total</span><span>{money(result.total)}</span>
-          </div>
-        </div>
-      </CardBox>
-
-      {/* Option 2: 2-year */}
-      <CardBox title="Option 2 — 2-year contract">
-        <div className="space-y-2">
-          {rows.map((r, i) => (
-            <div key={i}>
-              <div className="text-gray-700 font-medium truncate">{r.name}{r.flat ? ` (${r.qty} depts)` : ''}</div>
-              <div className="flex justify-between text-gray-500 text-xs pl-2">
-                <span>{baseYear}</span><span>{money(rowY1in2Net(r))}</span>
-              </div>
-              <div className="flex justify-between text-gray-500 text-xs pl-2">
-                <span>{baseYear + 1}</span><span>{money(rowY2Net(r))}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-        <div className="border-t border-gray-200 pt-2 mt-2 space-y-0.5">
-          {q.gd > 0 && <div className="flex justify-between text-gray-400 text-xs"><span>Discount ({q.gd}%)</span><span>−{money((result.sub + result.sub2) - (result.afterDisc + result.afterDisc2))}</span></div>}
-          {q.vat && <div className="flex justify-between text-gray-400 text-xs"><span>VAT (20%)</span><span>+{money(result.vat + result.vat2)}</span></div>}
-          <div className="flex justify-between text-gray-500 text-xs"><span>Year 1 total</span><span>{money(result.total)}</span></div>
-          <div className="flex justify-between text-gray-500 text-xs"><span>Year 2 total</span><span>{money(result.total2)}</span></div>
-          <div className="flex justify-between font-bold text-[#1e3a5f] pt-1">
-            <span>2-year total</span><span>{money(result.grand2y)}</span>
-          </div>
-        </div>
-      </CardBox>
-    </div>
-  );
-}
