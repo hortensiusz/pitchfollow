@@ -221,30 +221,39 @@ export default function QuoteSection() {
       {/* Totals */}
       {q.rows.some(r => r.name) && (
         <div className="mt-3 flex flex-col items-end gap-0.5 text-sm">
+
+          {/* 1-year option (shown for term=1y and term=both) */}
           {(q.term === '1y' || q.term === 'both') && (
             <TotalsBlock
-              label={q.term === 'both' ? 'Year 1 option' : undefined}
+              heading={q.term === 'both' ? '1-YEAR OPTION' : undefined}
+              totalLabel="Year 1 total:"
               sub={result.sub} gd={q.gd} afterDisc={result.afterDisc}
               vat={result.vat} total={result.total} vatOn={q.vat} money={money}
             />
           )}
-          {twoYear && (q.term === '2y' || q.term === 'both') && (
-            <TotalsBlock
-              label={q.term === 'both' ? 'Year 2 option (contract)' : undefined}
-              sub={result.sub2} gd={q.gd} afterDisc={result.afterDisc2}
-              vat={result.vat2} total={result.total2} vatOn={q.vat} money={money}
-              extraAfter={q.term === 'both' ? (
-                <div className="flex gap-6 min-w-[280px] justify-between border-t-2 border-[#1e3a5f] pt-2 mt-1">
-                  <span className="font-semibold">2-year total:</span>
-                  <strong className="text-[#1e3a5f] text-base">{money(result.grand2y)}</strong>
+
+          {/* 2-year contract (shown for term=2y and term=both) */}
+          {twoYear && (
+            <div className="mt-3 flex flex-col items-end gap-0.5">
+              {q.term === 'both' && (
+                <div className="text-xs text-gray-400 font-medium uppercase tracking-wide mb-1 min-w-[280px] text-right">
+                  2-YEAR CONTRACT
                 </div>
-              ) : undefined}
-            />
-          )}
-          {q.term === '2y' && (
-            <div className="flex gap-6 min-w-[280px] justify-between border-t-2 border-[#1e3a5f] pt-2 mt-1">
-              <span className="font-semibold">2-year total:</span>
-              <strong className="text-[#1e3a5f] text-base">{money(result.grand2y)}</strong>
+              )}
+              <TotalsBlock
+                totalLabel="Year 1 total:"
+                sub={result.sub} gd={q.gd} afterDisc={result.afterDisc}
+                vat={result.vat} total={result.total} vatOn={q.vat} money={money}
+              />
+              <TotalsBlock
+                totalLabel="Year 2 total:"
+                sub={result.sub2} gd={q.gd} afterDisc={result.afterDisc2}
+                vat={result.vat2} total={result.total2} vatOn={q.vat} money={money}
+              />
+              <div className="flex gap-6 min-w-[280px] justify-between border-t-2 border-[#1e3a5f] pt-2 mt-1">
+                <span className="font-semibold">2-year total:</span>
+                <strong className="text-[#1e3a5f] text-base">{money(result.grand2y)}</strong>
+              </div>
             </div>
           )}
         </div>
@@ -265,7 +274,8 @@ export default function QuoteSection() {
 }
 
 interface TotalsBlockProps {
-  label?: string;
+  heading?: string;
+  totalLabel: string;
   sub: number;
   gd: number;
   afterDisc: number;
@@ -273,28 +283,26 @@ interface TotalsBlockProps {
   total: number;
   vatOn: boolean;
   money: (n: number) => string;
-  extraAfter?: React.ReactNode;
 }
 
-function TotalsBlock({ label, sub, gd, afterDisc, vat, total, vatOn, money, extraAfter }: TotalsBlockProps) {
-  const Row = ({ l, v, bold, indent }: { l: string; v: string; bold?: boolean; indent?: boolean }) => (
+function TotalsBlock({ heading, totalLabel, sub, gd, afterDisc, vat, total, vatOn, money }: TotalsBlockProps) {
+  const Row = ({ l, v, indent }: { l: string; v: string; indent?: boolean }) => (
     <div className={`flex gap-6 min-w-[280px] justify-between ${indent ? 'text-gray-400' : ''}`}>
-      <span className={bold ? 'font-semibold' : 'text-gray-500'}>{l}</span>
-      <span className={bold ? 'font-bold text-[#1e3a5f]' : ''}>{v}</span>
+      <span className="text-gray-500">{l}</span>
+      <span>{v}</span>
     </div>
   );
   return (
-    <div className="mt-2 flex flex-col gap-0.5">
-      {label && <div className="text-xs text-gray-400 font-medium uppercase tracking-wide mb-1">{label}</div>}
+    <div className="mt-1 flex flex-col gap-0.5">
+      {heading && <div className="text-xs text-gray-400 font-medium uppercase tracking-wide mb-1">{heading}</div>}
       <Row l="Subtotal:" v={money(sub)} />
       {gd > 0 && <Row l={`Global discount (${gd}%):`} v={`−${money(sub - afterDisc)}`} indent />}
       {gd > 0 && <Row l="After discount:" v={money(afterDisc)} />}
       {vatOn && <Row l="VAT (20%):" v={`+${money(vat)}`} indent />}
       <div className="flex gap-6 min-w-[280px] justify-between border-t border-gray-300 pt-1 mt-0.5">
-        <span className="font-semibold">{label ? label.split(' ')[0] + ' ' + label.split(' ')[1] + ' total:' : 'Total:'}</span>
+        <span className="font-semibold">{totalLabel}</span>
         <strong className="text-[#1e3a5f]">{money(total)}</strong>
       </div>
-      {extraAfter}
     </div>
   );
 }
