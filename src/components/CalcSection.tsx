@@ -11,7 +11,7 @@ function fmt(n: number): string {
 }
 
 export default function CalcSection() {
-  const { addQuoteRow, saveState } = useStore();
+  const { app, setApp, addQuoteRow, saveState } = useStore();
 
   const [loaded, setLoaded] = useState(false);
   const [firmQ, setFirmQ] = useState('');
@@ -28,10 +28,32 @@ export default function CalcSection() {
 
   const inputRef = useRef<HTMLInputElement>(null);
   const sugRef = useRef<HTMLDivElement>(null);
+  // Track last client name we synced FROM app.client to avoid feedback loops
+  const syncedNameRef = useRef('');
 
   useEffect(() => {
     ensureFy27Data(() => setLoaded(true));
   }, []);
+
+  // Sync app.client → calc firm when BasicInfoSection changes the client
+  useEffect(() => {
+    if (!loaded || !app.client) return;
+    if (app.client === syncedNameRef.current) return; // we set this ourselves
+    syncedNameRef.current = app.client;
+    setFirmQ(app.client);
+    const hits = searchFirms(app.client);
+    const match = hits.find(f => f.n.toLowerCase() === app.client.toLowerCase()) ?? (hits.length === 1 ? hits[0] : null);
+    if (match) {
+      setSelectedFirm(match);
+      setShowSug(false);
+      setEntryIdx(0);
+      const en0 = match.e[0] as FirmEntry;
+      setChecks(defaultChecks(en0));
+      setDepN(defaultDepN(en0));
+      setManualPrices({});
+      setOpen(true);
+    }
+  }, [app.client, loaded]);
 
   // Search
   const doSearch = useCallback((q: string) => {
@@ -41,6 +63,8 @@ export default function CalcSection() {
   }, []);
 
   const selectFirm = useCallback((f: FirmRecord) => {
+    syncedNameRef.current = f.n; // prevent the useEffect from re-triggering
+    setApp({ client: f.n });
     setSelectedFirm(f);
     setFirmQ(f.n);
     setShowSug(false);
@@ -50,7 +74,7 @@ export default function CalcSection() {
     setDepN(defaultDepN(en));
     setManualPrices({});
     setOpen(true);
-  }, []);
+  }, [setApp]);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {

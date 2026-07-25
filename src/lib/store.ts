@@ -152,7 +152,7 @@ export const useStore = create<Store>((set, get) => ({
   },
 
   setUiLang: (lang) => {
-    set({ uiLang: lang });
+    set(s => ({ uiLang: lang, app: { ...s.app, lang } }));
     try { localStorage.setItem(LS_UI_LANG, lang); } catch {}
   },
 

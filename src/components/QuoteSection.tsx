@@ -106,8 +106,12 @@ export default function QuoteSection() {
             {q.rows.map((r, i) => {
               const sub = rowOneNet(r);
               const p1val = typeof r.p2y1 === 'number' ? r.p2y1 : (calcP1Default(r, q.twoYrDisc) as number | '');
-              const p2val = typeof r.p2 === 'number' && r.p2 ? r.p2 :
-                (typeof p1val === 'number' ? calcP2Default(p1val, q.y2Uplift) : '');
+              // Fix 5: use per-row uplift if set, otherwise global
+              const effectiveUplift = typeof r.up === 'number' ? r.up : q.y2Uplift;
+              // Fix 5: only use stored p2 when manually edited; otherwise always recalculate from uplift
+              const p2val = (r.y2manual && typeof r.p2 === 'number')
+                ? r.p2
+                : (typeof p1val === 'number' ? calcP2Default(p1val, effectiveUplift) : '');
               const p2below = twoYear && typeof p2val === 'number' && typeof p1val === 'number' && p2val < p1val;
 
               return (
@@ -121,16 +125,18 @@ export default function QuoteSection() {
                       placeholder={T('phRowName')}
                       onChange={e => handleNameChange(i, e.target.value)}
                     />
+                    {/* Fix 3: show guide */}
+                    {r.guide && <div className="text-xs text-gray-400 mt-0.5">Guide: {r.guide}</div>}
                     {r.parts && r.parts.length > 0 && (
-                      <div className="text-xs text-gray-400 mt-0.5">
-                        Bundle: {r.parts.join(' / ')}
-                      </div>
+                      <div className="text-xs text-gray-400 mt-0.5">Bundle: {r.parts.join(' / ')}</div>
                     )}
-                    {r.flat && <div className="text-xs text-gray-400">Total price (qty = dept. count)</div>}
+                    {/* Fix 4: show dept count for flat-priced (Insight) rows */}
+                    {r.flat && <div className="text-xs text-gray-400 mt-0.5">Flat total · {r.qty} dept{r.qty !== 1 ? 's' : ''}</div>}
                   </td>
                   <td className="py-1 px-2">
                     <input type="number" className="field-input w-full text-sm" min={0} step={1} value={r.qty}
                       onChange={e => updateRow(i, { qty: +e.target.value })} />
+                    {r.flat && <div className="text-xs text-gray-400 mt-0.5">depts</div>}
                   </td>
                   <td className="py-1 px-2">
                     <input type="number" className="field-input w-full text-sm" min={0} step={0.01} value={r.price}
@@ -158,13 +164,13 @@ export default function QuoteSection() {
                       <input type="number" className="field-input w-full text-sm" min={0} step={0.5}
                         value={r.up !== '' ? r.up : ''}
                         placeholder={String(q.y2Uplift)}
-                        onChange={e => updateRow(i, { up: e.target.value !== '' ? +e.target.value : '' })}
+                        onChange={e => updateRow(i, { up: e.target.value !== '' ? +e.target.value : '', y2manual: false })}
                       />
                     </td>
                     <td className="py-1 px-2">
                       <input type="number" className={`field-input w-full text-sm ${p2below ? 'border-red-400' : ''}`}
                         min={0} step={0.01}
-                        value={r.y2manual && typeof r.p2 === 'number' ? r.p2 : (typeof p2val === 'number' ? p2val : '')}
+                        value={typeof p2val === 'number' ? p2val : ''}
                         onChange={e => updateRow(i, { p2: +e.target.value, y2manual: true })}
                         placeholder={typeof p2val === 'number' ? String(p2val) : ''}
                       />

@@ -15,7 +15,7 @@ interface Props {
 }
 
 export default function BasicInfoSection({ onExtractContacts }: Props) {
-  const { app, setApp, setContacts, uiLang, saveState } = useStore();
+  const { app, setApp, setContacts, setUiLang, uiLang, saveState } = useStore();
   const T = (k: Parameters<typeof t>[0]) => t(k, uiLang);
   const save = useCallback(() => saveState(), [saveState]);
 
@@ -83,7 +83,7 @@ export default function BasicInfoSection({ onExtractContacts }: Props) {
           <select
             className="field-input"
             value={app.lang}
-            onChange={e => { setApp({ lang: e.target.value as LangCode }); save(); }}
+            onChange={e => { setUiLang(e.target.value as LangCode); save(); }}
           >
             {LANGS.map(l => <option key={l} value={l}>{LANG_LABELS[l]}</option>)}
           </select>
