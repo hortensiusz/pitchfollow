@@ -1,35 +1,10 @@
 'use client';
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useStore } from '@/lib/store';
-import { calcPricing, defaultChecks, defaultDepN, deriveScen, SCEN_LABELS, r100 } from '@/lib/fy27calc';
-import type { RateCard, FirmRecord, FirmEntry, CalcChecks, CalcRow } from '@/lib/fy27calc';
+import { calcPricing, defaultChecks, defaultDepN, deriveScen, SCEN_LABELS } from '@/lib/fy27calc';
+import type { FirmRecord, FirmEntry, CalcChecks, CalcRow } from '@/lib/fy27calc';
+import { ensureFy27Data, getRateCard, getFirms, searchFirms } from '@/lib/fy27data';
 import { Card } from './ui/Card';
-
-// Module-level singletons — fetch once per page load
-let _rc: RateCard | null = null;
-let _firms: FirmRecord[] | null = null;
-let _loading = false;
-let _listeners: Array<() => void> = [];
-
-async function ensureData(onReady: () => void) {
-  if (_rc && _firms) { onReady(); return; }
-  _listeners.push(onReady);
-  if (_loading) return;
-  _loading = true;
-  try {
-    const [rcRes, frRes] = await Promise.all([
-      fetch('/data/rate-card-tables.json'),
-      fetch('/data/firm-rates.json'),
-    ]);
-    _rc = await rcRes.json() as RateCard;
-    const frData = await frRes.json() as { firms: FirmRecord[] };
-    _firms = frData.firms;
-  } catch (e) {
-    console.error('FY27 data load failed', e);
-  }
-  _listeners.forEach(fn => fn());
-  _listeners = [];
-}
 
 function fmt(n: number): string {
   return '£' + n.toLocaleString('en-GB');
@@ -55,19 +30,14 @@ export default function CalcSection() {
   const sugRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    ensureData(() => setLoaded(true));
+    ensureFy27Data(() => setLoaded(true));
   }, []);
 
   // Search
   const doSearch = useCallback((q: string) => {
-    if (!_firms || q.length < 2) { setSuggestions([]); setShowSug(false); return; }
-    const lq = q.toLowerCase();
-    const hits: FirmRecord[] = [];
-    for (const f of _firms) {
-      if (f.n.toLowerCase().includes(lq)) { hits.push(f); if (hits.length >= 15) break; }
-    }
+    const hits = searchFirms(q);
     setSuggestions(hits);
-    setShowSug(true);
+    setShowSug(q.length >= 2);
   }, []);
 
   const selectFirm = useCallback((f: FirmRecord) => {
@@ -93,6 +63,7 @@ export default function CalcSection() {
   }, []);
 
   const en: FirmEntry | null = selectedFirm?.e[entryIdx] ?? null;
+  const _rc = getRateCard();
   const rows: CalcRow[] = en && _rc ? calcPricing(en, _rc, checks, mode, depN) : [];
 
   // When entry changes, reset checks & dep
@@ -226,7 +197,7 @@ export default function CalcSection() {
                   value={entryIdx}
                   onChange={e => handleEntryChange(+e.target.value)}
                 >
-                  {selectedFirm.e.map((entry, i) => (
+                  {selectedFirm.e.map((entry: FirmEntry, i: number) => (
                     <option key={i} value={i}>{entry[0]}</option>
                   ))}
                 </select>
@@ -310,7 +281,7 @@ export default function CalcSection() {
           )}
 
           {/* Bundle rules (collapsed) */}
-          {_rc?.bundleRules && _rc.bundleRules.length > 0 && (
+          {_rc && _rc.bundleRules && _rc.bundleRules.length > 0 && (
             <details className="text-xs text-gray-500">
               <summary className="cursor-pointer hover:text-gray-700 select-none">Bundle rules reference</summary>
               <div className="mt-1 space-y-1 pl-2 border-l-2 border-gray-100 max-h-40 overflow-y-auto">

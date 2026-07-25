@@ -3,7 +3,8 @@ import { useStore } from '@/lib/store';
 import { t, LANG_LABELS } from '@/lib/i18n';
 import type { LangCode, CurrencyCode } from '@/lib/types';
 import { Card } from './ui/Card';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ensureFy27Data, searchFirms } from '@/lib/fy27data';
 
 const LANGS: LangCode[] = ['en', 'zh', 'zhTW', 'fr', 'de', 'ptBR'];
 const CURRENCIES: CurrencyCode[] = ['£', '$', '€', '¥'];
@@ -17,6 +18,31 @@ export default function BasicInfoSection({ onExtractContacts }: Props) {
   const { app, setApp, setContacts, uiLang, saveState } = useStore();
   const T = (k: Parameters<typeof t>[0]) => t(k, uiLang);
   const save = useCallback(() => saveState(), [saveState]);
+
+  const [clientSugs, setClientSugs] = useState<string[]>([]);
+  const [showClientSug, setShowClientSug] = useState(false);
+  const clientInputRef = useRef<HTMLInputElement>(null);
+  const clientSugRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => { ensureFy27Data(() => {}); }, []); // pre-warm data
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (clientSugRef.current && !clientSugRef.current.contains(e.target as Node) && e.target !== clientInputRef.current) {
+        setShowClientSug(false);
+      }
+    };
+    document.addEventListener('click', handler);
+    return () => document.removeEventListener('click', handler);
+  }, []);
+
+  const handleClientInput = (val: string) => {
+    setApp({ client: val });
+    save();
+    const hits = searchFirms(val);
+    setClientSugs(hits.map(f => f.n));
+    setShowClientSug(hits.length > 0);
+  };
 
   const handleContactChange = (i: number, val: string) => {
     const c = [...app.contacts];
@@ -42,15 +68,41 @@ export default function BasicInfoSection({ onExtractContacts }: Props) {
       </h2>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
         {/* Client */}
-        <div>
+        <div className="relative">
           <label className="field-label">{T('lblClient')}</label>
           <input
+            ref={clientInputRef}
             type="text"
             className="field-input"
             value={app.client}
             placeholder={T('phClient')}
-            onChange={e => { setApp({ client: e.target.value }); save(); }}
+            onChange={e => handleClientInput(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === 'Enter' && clientSugs.length) {
+                setApp({ client: clientSugs[0] }); save(); setShowClientSug(false);
+              }
+              if (e.key === 'Escape') setShowClientSug(false);
+            }}
           />
+          {showClientSug && (
+            <div
+              ref={clientSugRef}
+              className="absolute z-40 left-0 right-0 top-full mt-0.5 bg-white border border-gray-200 rounded-lg shadow-lg max-h-52 overflow-y-auto text-sm"
+            >
+              {clientSugs.map((name, i) => (
+                <div
+                  key={i}
+                  className="px-3 py-1.5 cursor-pointer hover:bg-blue-50 text-gray-800"
+                  onMouseDown={e => {
+                    e.preventDefault(); // prevent blur before click registers
+                    setApp({ client: name }); save(); setShowClientSug(false);
+                  }}
+                >
+                  {name}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Meeting date */}
