@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useStore } from '@/lib/store';
 import { t, SECTION_DEFS } from '@/lib/i18n';
-import { aiComplete, isAiConfigured } from '@/lib/aiService';
+import { aiComplete } from '@/lib/aiService';
 
 import AppHeader from '@/components/AppHeader';
 import BasicInfoSection from '@/components/BasicInfoSection';
@@ -10,7 +10,6 @@ import MeetingNotesSection from '@/components/MeetingNotesSection';
 import ContentSection from '@/components/ContentSection';
 import QuoteSection from '@/components/QuoteSection';
 import CalcSection from '@/components/CalcSection';
-import AiSettingsDialog from '@/components/dialogs/AiSettingsDialog';
 import PriceListDialog from '@/components/dialogs/PriceListDialog';
 import OutputPanel from '@/components/dialogs/OutputPanel';
 import MatchResult from '@/components/dialogs/MatchResult';
@@ -21,10 +20,9 @@ interface MatchHit { p: PriceItem; hits: string[] }
 
 export default function Home() {
   const store = useStore();
-  const { app, setSectionItems, setSection, setContacts, priceList, aiConfig, uiLang, setStatus, saveState, loadState, resetAll } = store;
+  const { app, setSectionItems, setSection, setContacts, priceList, uiLang, setStatus, saveState, loadState, resetAll } = store;
   const T = useCallback((k: Parameters<typeof t>[0]) => t(k, uiLang), [uiLang]);
 
-  const [showAi, setShowAi] = useState(false);
   const [showPrices, setShowPrices] = useState(false);
   const [panel, setPanel] = useState<PanelKind>(null);
   const [panelTitle, setPanelTitle] = useState('');
@@ -61,7 +59,6 @@ export default function Home() {
   }, [app]);
 
   const genSections = async () => {
-    if (!isAiConfigured(aiConfig)) { alert(T('alertNoAi')); return; }
     if (!app.notes.trim()) { alert(T('alertNoNotes')); return; }
     const hasContent = SECTION_DEFS.some(d => app.secs[d.id]?.items.length);
     if (hasContent && !confirm(T('confirmOverwrite'))) return;
@@ -71,7 +68,7 @@ export default function Home() {
     const sys = `You are a Chambers (legal intelligence firm) sales advisor writing bullet points for a client-facing follow-up PPT. Write in a professional, client-centric tone. Generate 2-5 points per section. Output ONLY valid JSON, no code fences. All points must be in ${outLang}.`;
     const user = `Meeting notes:\n${app.notes}\n\nGenerate client-facing follow-up points as JSON:\n{"recap":[],"needs":[],"solution":[],"next":[]}\nrecap=meeting recap; needs=client requirements; solution=proposed solution; next=next steps`;
     try {
-      const raw = (await aiComplete(sys, user, aiConfig)).trim().replace(/^```(json)?\s*/i, '').replace(/```\s*$/, '');
+      const raw = (await aiComplete(sys, user)).trim().replace(/^```(json)?\s*/i, '').replace(/```\s*$/, '');
       const m = raw.match(/\{[\s\S]*\}/);
       const d = JSON.parse(m ? m[0] : raw);
       let filled = 0;
@@ -104,13 +101,12 @@ export default function Home() {
   };
 
   const extractContacts = async () => {
-    if (!isAiConfigured(aiConfig)) { alert(T('alertNoAi')); return; }
     if (!app.notes.trim()) { alert(T('alertNoNotes')); return; }
     setStatus('Extracting contacts…', 60000);
     const sys = 'Identify client-side attendee names from a sales meeting transcript. Only client names (not Chambers staff). Output ONLY a JSON string array, nothing else.';
     const user = `Meeting notes:\n${app.notes}\n\nOutput client contact names, e.g. ["Jane Smith","John Doe"]. Output [] if none found.`;
     try {
-      const raw = (await aiComplete(sys, user, aiConfig)).trim().replace(/^```(json)?\s*/i, '').replace(/```\s*$/, '');
+      const raw = (await aiComplete(sys, user)).trim().replace(/^```(json)?\s*/i, '').replace(/```\s*$/, '');
       const m = raw.match(/\[[\s\S]*\]/);
       const arr: string[] = JSON.parse(m ? m[0] : raw);
       if (Array.isArray(arr) && arr.filter(Boolean).length) {
@@ -131,18 +127,13 @@ export default function Home() {
     const user = `Write an internal follow-up summary.\nStructure: 1) Overview (2-3 sentences) 2) Client needs & concerns 3) Our proposed solution & quote highlights 4) Next actions (owners & deadlines; mark TBC if unknown) 5) Risks & notes.\n\n=== Structured data ===\n${ctx}\n\n=== Meeting notes ===\n${notes || '(not provided)'}`;
     setPanelTitle(T('sumTitleGen'));
     setPanel('summary');
-    if (!isAiConfigured(aiConfig)) {
-      setPanelHint(T('sumHintManual'));
-      setPanelContent(`[System]\n${sys}\n\n[User]\n${user}`);
-      return;
-    }
     setPanelHint(T('sumHintCalling')); setPanelContent('');
     try {
-      const out = await aiComplete(sys, user, aiConfig);
+      const out = await aiComplete(sys, user);
       setPanelHint(T('sumHintDone')); setPanelContent(out.trim());
     } catch (err: any) {
       setPanelHint(T('sumHintFail') + err.message);
-      setPanelContent(`[System]\n${sys}\n\n[User]\n${user}`);
+      setPanelContent('');
     }
   };
 
@@ -153,14 +144,9 @@ export default function Home() {
     const sys = `You are a Chambers (legal intelligence firm) sales advisor writing a post-meeting client follow-up email. Generate THREE distinct versions:\n=== Version 1 — Short, sharp & sweet ===\n=== Version 2 — Conversational ===\n=== Version 3 — Professional & structured ===\nAll three in ${outLang}. Each must include: Subject:, greeting, thanks, recap, solution/quote highlights, next steps, sign-off. Base only on provided material. Never fabricate facts or prices. Output only the three versions with the === headers above.`;
     const user = `=== Structured data ===\n${ctx}\n\n=== Meeting notes ===\n${notes || '(not provided)'}`;
     setPanelTitle(T('emailTitle')); setPanel('email');
-    if (!isAiConfigured(aiConfig)) {
-      setPanelHint(T('sumHintManual'));
-      setPanelContent([`[System]\n${sys}\n\n[User]\n${user}`, '', '']);
-      return;
-    }
     setPanelHint(T('sumHintCalling')); setPanelContent(['', '', '']);
     try {
-      const out = await aiComplete(sys, user, aiConfig);
+      const out = await aiComplete(sys, user);
       const re = /===\s*Version\s*([1-3])[^\n]*===/gi;
       const idxs: { n: number; end: number; start: number }[] = [];
       let m: RegExpExecArray | null;
@@ -175,7 +161,7 @@ export default function Home() {
       setPanelHint(T('emailHintDone')); setPanelContent(vs);
     } catch (err: any) {
       setPanelHint(T('sumHintFail') + err.message);
-      setPanelContent([`[System]\n${sys}\n\n[User]\n${user}`, '', '']);
+      setPanelContent(['', '', '']);
     }
   };
 
@@ -190,7 +176,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-[#f4f6f9]">
-      <AppHeader onSummary={genSummary} onEmail={genEmail} onPrices={() => setShowPrices(true)} onAiCfg={() => setShowAi(true)} />
+      <AppHeader onSummary={genSummary} onEmail={genEmail} onPrices={() => setShowPrices(true)} />
 
       <main className="max-w-4xl mx-auto px-4 py-6 flex flex-col gap-5 pb-24">
         <BasicInfoSection onExtractContacts={extractContacts} />
@@ -216,7 +202,6 @@ export default function Home() {
         <button onClick={exportPPT} className="btn-primary text-sm px-8">{T('btnExport')}</button>
       </div>
 
-      <AiSettingsDialog open={showAi} onClose={() => setShowAi(false)} />
       <PriceListDialog open={showPrices} onClose={() => setShowPrices(false)} />
     </div>
   );

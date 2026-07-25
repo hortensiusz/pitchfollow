@@ -9,10 +9,9 @@ interface Props {
   onSummary: () => void;
   onEmail: () => void;
   onPrices: () => void;
-  onAiCfg: () => void;
 }
 
-export default function AppHeader({ onSummary, onEmail, onPrices, onAiCfg }: Props) {
+export default function AppHeader({ onSummary, onEmail, onPrices }: Props) {
   const { uiLang, setUiLang, statusMsg } = useStore();
   const T = (k: Parameters<typeof t>[0]) => t(k, uiLang);
 
@@ -33,7 +32,6 @@ export default function AppHeader({ onSummary, onEmail, onPrices, onAiCfg }: Pro
         <HeaderBtn onClick={onSummary}>{T('btnSummary')}</HeaderBtn>
         <HeaderBtn onClick={onEmail}>{T('btnFollowupEmail')}</HeaderBtn>
         <HeaderBtn onClick={onPrices}>{T('btnPrices')}</HeaderBtn>
-        <HeaderBtn onClick={onAiCfg}>{T('btnAiCfg')}</HeaderBtn>
         {statusMsg && (
           <span className="text-xs text-yellow-300 font-medium">{statusMsg}</span>
         )}
