@@ -21,24 +21,42 @@ export default function BasicInfoSection({ onExtractContacts }: Props) {
 
   const [clientSugs, setClientSugs] = useState<string[]>([]);
   const [showClientSug, setShowClientSug] = useState(false);
+  const [firmsReady, setFirmsReady] = useState(false);
   const clientInputRef = useRef<HTMLInputElement>(null);
   const clientSugRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => { ensureFy27Data(() => {}); }, []); // pre-warm data
+  useEffect(() => {
+    ensureFy27Data(() => setFirmsReady(true));
+  }, []);
+
+  // Re-run search once firms data loads (user may have already typed)
+  useEffect(() => {
+    if (firmsReady && app.client.length >= 2) {
+      const hits = searchFirms(app.client);
+      setClientSugs(hits.map(f => f.n));
+      setShowClientSug(hits.length > 0);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [firmsReady]);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (clientSugRef.current && !clientSugRef.current.contains(e.target as Node) && e.target !== clientInputRef.current) {
+      if (
+        clientSugRef.current &&
+        !clientSugRef.current.contains(e.target as Node) &&
+        e.target !== clientInputRef.current
+      ) {
         setShowClientSug(false);
       }
     };
-    document.addEventListener('click', handler);
-    return () => document.removeEventListener('click', handler);
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
   }, []);
 
   const handleClientInput = (val: string) => {
     setApp({ client: val });
     save();
+    if (!firmsReady) return;
     const hits = searchFirms(val);
     setClientSugs(hits.map(f => f.n));
     setShowClientSug(hits.length > 0);
@@ -75,7 +93,7 @@ export default function BasicInfoSection({ onExtractContacts }: Props) {
             type="text"
             className="field-input"
             value={app.client}
-            placeholder={T('phClient')}
+            placeholder={firmsReady ? T('phClient') : T('phClient') + ' …'}
             onChange={e => handleClientInput(e.target.value)}
             onKeyDown={e => {
               if (e.key === 'Enter' && clientSugs.length) {
