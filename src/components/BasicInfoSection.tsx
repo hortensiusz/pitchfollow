@@ -3,7 +3,7 @@ import { useStore } from '@/lib/store';
 import { t, LANG_LABELS } from '@/lib/i18n';
 import type { LangCode, CurrencyCode } from '@/lib/types';
 import { Card } from './ui/Card';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { ensureFy27Data, searchFirms } from '@/lib/fy27data';
 
 const LANGS: LangCode[] = ['en', 'zh', 'zhTW', 'fr', 'de', 'ptBR'];
@@ -20,47 +20,25 @@ export default function BasicInfoSection({ onExtractContacts }: Props) {
   const save = useCallback(() => saveState(), [saveState]);
 
   const [clientSugs, setClientSugs] = useState<string[]>([]);
-  const [showClientSug, setShowClientSug] = useState(false);
   const [firmsReady, setFirmsReady] = useState(false);
-  const clientInputRef = useRef<HTMLInputElement>(null);
-  const clientSugRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     ensureFy27Data(() => setFirmsReady(true));
   }, []);
 
-  // Re-run search once firms data loads (user may have already typed)
-  useEffect(() => {
-    if (firmsReady && app.client.length >= 2) {
-      const hits = searchFirms(app.client);
-      setClientSugs(hits.map(f => f.n));
-      setShowClientSug(hits.length > 0);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [firmsReady]);
-
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (
-        clientSugRef.current &&
-        !clientSugRef.current.contains(e.target as Node) &&
-        e.target !== clientInputRef.current
-      ) {
-        setShowClientSug(false);
-      }
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, []);
-
   const handleClientInput = (val: string) => {
     setApp({ client: val });
     save();
-    if (!firmsReady) return;
-    const hits = searchFirms(val);
-    setClientSugs(hits.map(f => f.n));
-    setShowClientSug(hits.length > 0);
+    setClientSugs(firmsReady ? searchFirms(val).map(f => f.n) : []);
   };
+
+  // Re-search when data finishes loading if field already has text
+  useEffect(() => {
+    if (firmsReady && app.client.length >= 2) {
+      setClientSugs(searchFirms(app.client).map(f => f.n));
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [firmsReady]);
 
   const handleContactChange = (i: number, val: string) => {
     const c = [...app.contacts];
@@ -86,41 +64,22 @@ export default function BasicInfoSection({ onExtractContacts }: Props) {
       </h2>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
         {/* Client */}
-        <div className="relative">
-          <label className="field-label">{T('lblClient')}</label>
+        <div>
+          <label className="field-label">
+            {T('lblClient')}
+            {!firmsReady && <span className="ml-1 text-gray-300 font-normal text-xs">loading…</span>}
+          </label>
           <input
-            ref={clientInputRef}
             type="text"
+            list="client-firms-list"
             className="field-input"
             value={app.client}
-            placeholder={firmsReady ? T('phClient') : T('phClient') + ' …'}
+            placeholder={T('phClient')}
             onChange={e => handleClientInput(e.target.value)}
-            onKeyDown={e => {
-              if (e.key === 'Enter' && clientSugs.length) {
-                setApp({ client: clientSugs[0] }); save(); setShowClientSug(false);
-              }
-              if (e.key === 'Escape') setShowClientSug(false);
-            }}
           />
-          {showClientSug && (
-            <div
-              ref={clientSugRef}
-              className="absolute z-40 left-0 right-0 top-full mt-0.5 bg-white border border-gray-200 rounded-lg shadow-lg max-h-52 overflow-y-auto text-sm"
-            >
-              {clientSugs.map((name, i) => (
-                <div
-                  key={i}
-                  className="px-3 py-1.5 cursor-pointer hover:bg-blue-50 text-gray-800"
-                  onMouseDown={e => {
-                    e.preventDefault(); // prevent blur before click registers
-                    setApp({ client: name }); save(); setShowClientSug(false);
-                  }}
-                >
-                  {name}
-                </div>
-              ))}
-            </div>
-          )}
+          <datalist id="client-firms-list">
+            {clientSugs.map(name => <option key={name} value={name} />)}
+          </datalist>
         </div>
 
         {/* Meeting date */}
