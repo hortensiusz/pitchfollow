@@ -19,8 +19,19 @@ export function calcQuote(quote: QuoteState): CalcResult {
   quote.rows.forEach(r => {
     const line = (r.flat ? r.price : r.qty * r.price) * (1 - r.disc / 100);
     sub += line;
-    const p2 = typeof r.p2 === 'number' ? r.p2 : 0;
-    sub2 += (r.flat ? p2 : r.qty * p2) * (1 - r.disc / 100);
+
+    // Compute Y2 net using the same logic as QuoteSection display:
+    // use stored p2 only when y2manual=true, otherwise auto-calculate from uplift
+    let p2net: number;
+    if (r.y2manual && typeof r.p2 === 'number') {
+      p2net = (r.flat ? r.p2 : r.qty * r.p2) * (1 - r.disc / 100);
+    } else {
+      const p1unit = calcP1Default(r, quote.twoYrDisc);
+      const effectiveUplift = typeof r.up === 'number' ? r.up : quote.y2Uplift;
+      const p2unit = typeof p1unit === 'number' ? calcP2Default(p1unit, effectiveUplift) : '';
+      p2net = typeof p2unit === 'number' ? (r.flat ? p2unit : r.qty * p2unit) : 0;
+    }
+    sub2 += p2net;
   });
   const gd = quote.gd;
   const afterDisc = sub * (1 - gd / 100);
