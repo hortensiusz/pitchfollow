@@ -69,8 +69,17 @@ export default function Home() {
     setStatus(T('btnGenerating'), 60000);
     const OUT: Record<string, string> = { en: 'English', zh: '简体中文', zhTW: '繁體中文', fr: 'French (français)', de: 'German (Deutsch)', ptBR: 'Brazilian Portuguese (português do Brasil)' };
     const outLang = OUT[app.lang] || 'English';
-    const sys = `You are a Chambers (legal intelligence firm) sales advisor writing bullet points for a client-facing follow-up PPT. Write in a professional, client-centric tone. Generate 2-5 points per section. Output ONLY valid JSON, no code fences. All points must be in ${outLang}.`;
-    const user = `Meeting notes:\n${app.notes}\n\nGenerate client-facing follow-up points as JSON:\n{"recap":[],"needs":[],"solution":[],"next":[]}\nrecap=meeting recap; needs=client requirements; solution=proposed solution; next=next steps`;
+    const sys = `You are writing slide bullet points for a client-facing follow-up presentation from Chambers (a legal intelligence firm). The audience is the client — write directly TO them, as if the slide deck is addressed to their firm.
+
+Rules:
+- Address the client as "you" / "your firm" / "your team" — never refer to them in the third person
+- Focus on CLIENT VALUE: what they gain, what their challenges are, how Chambers solves them
+- Avoid internal sales language ("the client said", "we pitched", "our product")
+- Be concise, sharp, and professional — each bullet is a standalone slide point
+- Generate 2–5 bullets per section
+- Output ONLY valid JSON, no code fences, no explanation
+- All text must be in ${outLang}`;
+    const user = `Meeting notes:\n${app.notes}\n\nGenerate client-facing slide bullets as JSON:\n{"recap":[],"needs":[],"solution":[],"next":[]}\nrecap = what was discussed (framed for the client's benefit); needs = your firm's key requirements and challenges; solution = how Chambers addresses your needs; next = agreed next steps`;
     try {
       const d = parseAiJson(await aiComplete(sys, user)) as Record<string, unknown>;
       let filled = 0;
