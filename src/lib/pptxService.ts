@@ -1,6 +1,6 @@
 import type { AppState, PriceItem, LangCode } from './types';
 import { SECTION_DEFS, QUOTE_TITLES, sectionLabel } from './i18n';
-import { calcQuote, formatMoney, rowOneNet } from './quoteCalc';
+import { calcQuote, formatMoney, rowOneNet, calcP1Default, calcP2Default } from './quoteCalc';
 
 const NAVY = '1E3A5F';
 const WHITE = 'FFFFFF';
@@ -130,27 +130,68 @@ export async function exportPPTX(app: AppState, priceList: PriceItem[]) {
       const cardW = cards.length === 1 ? Math.min(8.6, totalW) : (totalW - gap) / 2;
       const startX = cards.length === 1 ? (13.33 - cardW) / 2 : mX;
 
+      // Helper: compute per-row Y2 net — mirrors QuoteSection / calcQuote logic
+      const rowY2Net = (r: typeof rows[0]): number => {
+        if (r.y2manual && typeof r.p2 === 'number') {
+          return (r.flat ? r.p2 : r.qty * r.p2) * (1 - r.disc / 100);
+        }
+        const p1u = calcP1Default(r, quote.twoYrDisc);
+        if (typeof p1u !== 'number') return 0;
+        const eff = typeof r.up === 'number' ? r.up : quote.y2Uplift;
+        const p2u = calcP2Default(p1u, eff);
+        return typeof p2u === 'number' ? (r.flat ? p2u : r.qty * p2u) : 0;
+      };
+
+      // Helper: compute per-row Y1-in-2yr net
+      const rowY1in2Net = (r: typeof rows[0]): number => {
+        if (r.p2y1manual && typeof r.p2y1 === 'number') {
+          return (r.flat ? r.p2y1 : r.qty * r.p2y1) * (1 - r.disc / 100);
+        }
+        const p1u = calcP1Default(r, quote.twoYrDisc);
+        return typeof p1u === 'number' ? (r.flat ? p1u : r.qty * p1u) : rowOneNet(r);
+      };
+
       cards.forEach((tm, ti) => {
         const cx = startX + ti * (cardW + gap);
+
+        // Totals footer height: 1-yr = 1 line, 2-yr = 3 lines
+        const footH = tm === '1' ? 0.55 : 1.0;
+        const contentH = cardH - 0.72 - 0.25 - footH - 0.2; // header + top-pad + footer + bottom-pad
+
         slide.addShape('roundRect', { x: cx, y: cardY, w: cardW, h: cardH, rectRadius: 0.08, fill: { color: 'F7F9FC' }, line: { color: 'DFE4EA', width: 1 } });
         slide.addShape('rect', { x: cx, y: cardY, w: cardW, h: 0.72, fill: { color: NAVY } });
-        const optLabel = `Option ${ti + 1}: ${tm === '1' ? '1-year' : '2-year'}`;
+        const optLabel = `Option ${ti + 1}: ${tm === '1' ? '1-year' : '2-year contract'}`;
         slide.addText(optLabel, { x: cx + 0.3, y: cardY, w: cardW - 0.6, h: 0.72, fontSize: 16, bold: true, color: WHITE, fontFace: FONT, valign: 'middle' });
 
+        // Line items
         const runs: any[] = [];
         rows.forEach((r, ri) => {
           const displayName = r.name.replace(/\s*[\(（][^)）]*[\)）]/g, '').trim() + (r.flat ? ` — ${r.qty} depts` : '');
-          runs.push({ text: displayName, options: { bold: true, fontSize: 13.5, color: NAVY, breakLine: true, paraSpaceBefore: ri ? 12 : 0, paraSpaceAfter: 3, fontFace: FONT } });
+          runs.push({ text: displayName, options: { bold: true, fontSize: 13, color: NAVY, breakLine: true, paraSpaceBefore: ri ? 10 : 0, paraSpaceAfter: 2, fontFace: FONT } });
           if (tm === '1') {
-            runs.push({ text: `   • ${y1y}: ${money(rowOneNet(r))}`, options: { fontSize: 13, color: TEXT, breakLine: true, fontFace: FONT } });
+            runs.push({ text: `   ${money(rowOneNet(r))}`, options: { fontSize: 12.5, color: TEXT, breakLine: true, fontFace: FONT } });
           } else {
-            const p1 = typeof r.p2y1 === 'number' ? r.p2y1 : rowOneNet(r);
-            const p2 = typeof r.p2 === 'number' ? r.p2 : 0;
-            runs.push({ text: `   • ${y1y}: ${money(r.flat ? p1 : r.qty * p1)}`, options: { fontSize: 13, color: TEXT, breakLine: true, fontFace: FONT } });
-            runs.push({ text: `   • ${y2y}: ${money(r.flat ? p2 : r.qty * p2)}`, options: { fontSize: 13, color: TEXT, breakLine: true, fontFace: FONT } });
+            runs.push({ text: `   ${y1y}: ${money(rowY1in2Net(r))}`, options: { fontSize: 12.5, color: TEXT, breakLine: true, fontFace: FONT } });
+            runs.push({ text: `   ${y2y}: ${money(rowY2Net(r))}`, options: { fontSize: 12.5, color: TEXT, breakLine: true, fontFace: FONT } });
           }
         });
-        slide.addText(runs, { x: cx + 0.35, y: cardY + 0.95, w: cardW - 0.7, h: cardH - 1.15, fontSize: 13, fontFace: FONT, valign: 'middle' });
+        slide.addText(runs, { x: cx + 0.35, y: cardY + 0.85, w: cardW - 0.7, h: contentH, fontSize: 13, fontFace: FONT, valign: 'top' });
+
+        // Totals footer
+        const footY = cardY + cardH - footH - 0.1;
+        slide.addShape('line', { x: cx + 0.2, y: footY, w: cardW - 0.4, h: 0, line: { color: 'DFE4EA', width: 0.75 } });
+
+        if (tm === '1') {
+          const totalLabel = `Total: ${money(result.total)}`;
+          slide.addText(totalLabel, { x: cx + 0.3, y: footY + 0.07, w: cardW - 0.6, h: 0.42, fontSize: 14, bold: true, color: NAVY, fontFace: FONT, align: 'right', valign: 'middle' });
+        } else {
+          const footRuns = [
+            { text: `${y1y} total: ${money(result.total)}`, options: { fontSize: 12, color: TEXT, breakLine: true, fontFace: FONT } },
+            { text: `${y2y} total: ${money(result.total2)}`, options: { fontSize: 12, color: TEXT, breakLine: true, fontFace: FONT } },
+            { text: `2-year total: ${money(result.grand2y)}`, options: { fontSize: 14, bold: true, color: NAVY, breakLine: false, fontFace: FONT } },
+          ];
+          slide.addText(footRuns, { x: cx + 0.3, y: footY + 0.07, w: cardW - 0.6, h: footH - 0.1, fontSize: 12, fontFace: FONT, align: 'right', valign: 'top' });
+        }
       });
 
       if (quote.note.trim()) {
