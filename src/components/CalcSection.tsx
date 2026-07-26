@@ -292,20 +292,21 @@ export default function CalcSection() {
     if (saving > 0) {
       return (
         <div className="mt-1 text-xs text-emerald-600 font-medium">
-          Bundle saving: {fmt(saving)} vs standalone ({SCEN_LABELS[0]}: {fmt(standalonePitch)})
+          {SCEN_LABELS[scenK]} bundle · saving {fmt(saving)} vs standalone ({fmt(standalonePitch)})
         </div>
       );
     }
-    if (bestUpgradeHint) {
-      return (
-        <div className="mt-1 text-xs text-amber-600 font-medium">
-          No bundle discount for this combination — add{' '}
-          <span className="font-semibold">{bestUpgradeHint.label}</span>{' '}
-          to save {fmt(bestUpgradeHint.saving)}
-        </div>
-      );
-    }
-    return null;
+    // Recognised bundle scenario but no Platform price reduction for this firm
+    return (
+      <div className="mt-1 text-xs text-sky-700 font-medium">
+        {SCEN_LABELS[scenK]} bundle
+        {bestUpgradeHint && (
+          <span className="text-amber-600">
+            {' '}· add <span className="font-semibold">{bestUpgradeHint.label}</span> to save {fmt(bestUpgradeHint.saving)}
+          </span>
+        )}
+      </div>
+    );
   };
 
   return (
