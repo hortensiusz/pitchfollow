@@ -11,8 +11,10 @@ import { calcQuote, formatMoney, rowOneNet, calcP1Default, calcP2Default } from 
 const TEMPLATE = 'chambers-template-2026.pptx';
 const FONT = 'Avenir Next LT Pro';
 const NAVY = '002B49';
+const BRONZE = 'B68A52';
 const GRAY = '8E8E89';
-const BORDER = 'DDE1E7';
+const MUTED = '6B7683';
+const BORDER = 'E4E2DC';
 
 // Template slide roles (verified against chambers-template-2026.pptx)
 const SLIDE = {
@@ -21,10 +23,22 @@ const SLIDE = {
   back: 12,   // beige back cover — Text Placeholder 2 (contact block)
 };
 
-// Content area on a body slide (13.33 x 7.5"), below the heading, above footer
-const AREA = { x: 0.55, y: 1.55, w: 12.2, h: 5.0 };
+// Editorial content block on a body slide (13.33 x 7.5"): narrow measure,
+// generous left margin, vertically centred in the space below the heading.
+const AREA = { x: 0.95, y: 1.55, w: 9.6, h: 4.95 };
 
 type QuoteRow = AppState['quote']['rows'][number];
+
+/** Group quote rows by their guide, preserving first-seen order. */
+function groupByGuide(rows: QuoteRow[]): Array<{ guide: string; rows: QuoteRow[] }> {
+  const map = new Map<string, QuoteRow[]>();
+  for (const r of rows) {
+    const g = (r.guide || '').trim();
+    if (!map.has(g)) map.set(g, []);
+    map.get(g)!.push(r);
+  }
+  return [...map.entries()].map(([guide, rs]) => ({ guide, rows: rs }));
+}
 
 /** Format an ISO date (YYYY-MM-DD) as UK long form, e.g. "26 July 2026". */
 function ukDate(iso: string): string {
@@ -78,21 +92,33 @@ export async function buildTemplatePptx(app: AppState, priceList: PriceItem[]): 
     }
   });
 
-  // ── Section (one content slide per ~6 bullets; no empty divider slides) ───
+  // ── Section body slide — editorial calm: a narrow, vertically-centred
+  // measure with generous leading and a bronze marker. No divider slides.
+  const addBodySlide = (title: string, items: string[], fontSize = 17, marginPt = 20) => {
+    pres.addSlide('tpl', SLIDE.body, (slide: any) => {
+      setTitle(slide, title);
+      slide.generate((p: any) => {
+        p.addText(
+          items.map((t) => ({
+            text: t,
+            options: { bullet: { code: '2022', indent: 22 }, breakLine: true, color: NAVY },
+          })),
+          {
+            x: AREA.x, y: AREA.y, w: AREA.w, h: AREA.h,
+            fontSize, color: NAVY, fontFace: FONT, valign: 'middle',
+            paraSpaceAfter: marginPt, lineSpacingMultiple: 1.35,
+          },
+        );
+      }, 'bullets');
+    });
+  };
+
   const addSection = (title: string, items: string[]) => {
     if (!items.length) return;
     for (let i = 0; i < items.length; i += 6) {
       const chunk = items.slice(i, i + 6);
       const suffix = items.length > 6 ? ` (${Math.floor(i / 6) + 1})` : '';
-      pres.addSlide('tpl', SLIDE.body, (slide: any) => {
-        setTitle(slide, title + suffix);
-        slide.generate((p: any) => {
-          p.addText(
-            chunk.map((t) => ({ text: t, options: { bullet: { code: '2022' }, breakLine: true } })),
-            { ...AREA, fontSize: 16, color: NAVY, fontFace: FONT, valign: 'top', paraSpaceAfter: 10, lineSpacingMultiple: 1.1 },
-          );
-        }, 'bullets');
-      });
+      addBodySlide(title + suffix, chunk);
     }
   };
 
@@ -111,16 +137,8 @@ export async function buildTemplatePptx(app: AppState, priceList: PriceItem[]): 
     for (const nm of names) {
       const p = priceList.find((x) => x.name === nm);
       if (!p?.desc?.trim()) continue;
-      const pts = p.desc.split(/\n+/).map((s) => s.trim()).filter(Boolean);
-      pres.addSlide('tpl', SLIDE.body, (slide: any) => {
-        setTitle(slide, nm);
-        slide.generate((pg: any) => {
-          pg.addText(
-            pts.map((t) => ({ text: t, options: { bullet: { code: '2022' }, breakLine: true } })),
-            { ...AREA, fontSize: 15, color: NAVY, fontFace: FONT, valign: 'top', paraSpaceAfter: 8, lineSpacingMultiple: 1.1 },
-          );
-        }, 'prodBullets');
-      });
+      const pts = p.desc.split(/\n+/).map((s) => s.trim()).filter(Boolean).slice(0, 6);
+      addBodySlide(nm, pts, 16, 16);
     }
   }
 
@@ -157,6 +175,9 @@ export async function buildTemplatePptx(app: AppState, priceList: PriceItem[]): 
       pres.addSlide('tpl', SLIDE.body, (slide: any) => {
         setTitle(slide, quote.title || QUOTE_TITLES[lang] || 'Commercial Proposal');
         slide.generate((p: any) => {
+          const groups = groupByGuide(rows);
+          const GOLD = 'CFC570', GREEN = '2E7D5B', CARD_BG = 'FBFAF7', GHEAD = 'F5F3ED';
+
           if (term === 'both') {
             // ── Two comparison cards, guiding toward the 2-year contract ────
             const y1Total = gdVat(sumRows(rowOneNet));
@@ -165,114 +186,148 @@ export async function buildTemplatePptx(app: AppState, priceList: PriceItem[]): 
             const twoTotal = two1 + two2;
             const y1Saving = Math.max(0, y1Total - two1);
 
-            const cardW = 5.75, gap = 0.5, cardY = 1.5, cardH = 4.95;
+            const cardW = 5.75, gap = 0.5, cardY = 1.62, cardH = 4.78;
             const x1 = 0.69, x2 = x1 + cardW + gap;
-            const GOLD = 'CFC570', BRONZE = 'B68A52', GREEN = '2E8B57', LIGHT = 'F7F8FA';
+
+            // Grouped line-item rows (guide sub-header + products) for a card
+            const buildRows = (price: (r: QuoteRow) => number) => {
+              const out: any[][] = [];
+              for (const g of groups) {
+                if (g.guide) {
+                  out.push([{
+                    text: g.guide.toUpperCase(),
+                    options: {
+                      colspan: 2, color: BRONZE, bold: true, fontSize: 8.5, charSpacing: 2,
+                      align: 'left', valign: 'middle', fontFace: FONT, fill: { color: CARD_BG },
+                      border: [{ type: 'none' }, { type: 'none' }, { type: 'solid', color: BRONZE, pt: 0.5 }, { type: 'none' }],
+                    },
+                  }]);
+                }
+                for (const r of g.rows) {
+                  out.push([
+                    { text: cleanName(r), options: { color: NAVY, fontFace: FONT, align: 'left', fontSize: 10.5, valign: 'middle' } },
+                    { text: money(price(r)), options: { color: NAVY, fontFace: FONT, align: 'right', fontSize: 10.5, bold: true, valign: 'middle' } },
+                  ]);
+                }
+              }
+              return out;
+            };
 
             const drawCard = (x: number, o: {
               optLabel: string; termLabel: string; headFill: string; border: string; borderW: number;
-              recommended?: boolean; items: Array<[string, string]>; footer: () => void;
+              recommended?: boolean; itemRows: any[][]; footer: () => void;
             }) => {
-              // Card background + header
-              p.addShape('roundRect', { x, y: cardY, w: cardW, h: cardH, rectRadius: 0.09, fill: { color: LIGHT }, line: { color: o.border, width: o.borderW } });
-              p.addShape('roundRect', { x, y: cardY, w: cardW, h: 0.72, rectRadius: 0.09, fill: { color: o.headFill }, line: { width: 0 } });
-              p.addShape('rect', { x, y: cardY + 0.4, w: cardW, h: 0.32, fill: { color: o.headFill }, line: { width: 0 } });
+              p.addShape('roundRect', { x, y: cardY, w: cardW, h: cardH, rectRadius: 0.08, fill: { color: CARD_BG }, line: { color: o.border, width: o.borderW } });
+              p.addShape('roundRect', { x, y: cardY, w: cardW, h: 0.68, rectRadius: 0.08, fill: { color: o.headFill }, line: { width: 0 } });
+              p.addShape('rect', { x, y: cardY + 0.36, w: cardW, h: 0.32, fill: { color: o.headFill }, line: { width: 0 } });
               p.addText(
                 [
-                  { text: o.optLabel + '\n', options: { fontSize: 10, bold: true, color: 'FFFFFF', charSpacing: 3 } },
-                  { text: o.termLabel, options: { fontSize: 16, bold: true, color: 'FFFFFF' } },
+                  { text: o.optLabel + '\n', options: { fontSize: 9.5, bold: true, color: GOLD, charSpacing: 3 } },
+                  { text: o.termLabel, options: { fontSize: 15, bold: true, color: 'FFFFFF' } },
                 ],
-                { x: x + 0.28, y: cardY + 0.02, w: cardW - 0.6, h: 0.68, fontFace: FONT, valign: 'middle', align: 'left' },
+                { x: x + 0.3, y: cardY + 0.0, w: cardW - 0.6, h: 0.68, fontFace: FONT, valign: 'middle', align: 'left' },
               );
               if (o.recommended) {
-                p.addText('★ RECOMMENDED', { x: x + cardW - 2.05, y: cardY + 0.2, w: 1.8, h: 0.32, fontSize: 8.5, bold: true, color: NAVY, fill: { color: GOLD }, align: 'center', valign: 'middle', fontFace: FONT });
+                p.addText('★ RECOMMENDED', { x: x + cardW - 2.0, y: cardY + 0.19, w: 1.72, h: 0.3, fontSize: 8, bold: true, color: NAVY, fill: { color: GOLD }, align: 'center', valign: 'middle', fontFace: FONT });
               }
-              // Line items
-              const tRows = o.items.map(([n, v]) => [
-                { text: n, options: { color: NAVY, fontFace: FONT, align: 'left', fontSize: 10.5, valign: 'middle' } },
-                { text: v, options: { color: NAVY, fontFace: FONT, align: 'right', fontSize: 10.5, bold: true, valign: 'middle' } },
-              ]);
-              p.addTable(tRows, {
-                x: x + 0.28, y: cardY + 0.95, w: cardW - 0.56, colW: [cardW - 0.56 - 1.6, 1.6],
-                rowH: 0.36, valign: 'middle', border: { type: 'solid', color: 'ECECEC', pt: 0.5 },
+              p.addTable(o.itemRows, {
+                x: x + 0.3, y: cardY + 0.9, w: cardW - 0.6, colW: [cardW - 0.6 - 1.55, 1.55],
+                rowH: 0.32, valign: 'middle', border: { type: 'solid', color: 'EEEBE3', pt: 0.5 },
               });
               o.footer();
             };
 
-            // Card 1 — 1-Year
+            // Card 1 — 1-Year (restrained, secondary)
             drawCard(x1, {
-              optLabel: 'OPTION 1', termLabel: '1-Year Contract', headFill: '5A6B7B', border: BORDER, borderW: 1,
-              items: rows.map((r) => [cleanName(r), money(rowOneNet(r))] as [string, string]),
+              optLabel: 'OPTION 1', termLabel: '1-Year Contract', headFill: '7A8794', border: BORDER, borderW: 1,
+              itemRows: buildRows(rowOneNet),
               footer: () => {
-                const fy = cardY + cardH - 1.05;
-                p.addShape('rect', { x: x1 + 0.28, y: fy, w: cardW - 0.56, h: 0.014, fill: { color: BRONZE }, line: { width: 0 } });
-                p.addText('Annual total', { x: x1 + 0.28, y: fy + 0.1, w: 2.8, h: 0.4, fontSize: 11, color: GRAY, fontFace: FONT, valign: 'middle' });
-                p.addText(money(y1Total), { x: x1 + cardW - 3.0, y: fy + 0.1, w: 2.72, h: 0.4, fontSize: 17, bold: true, color: NAVY, align: 'right', fontFace: FONT, valign: 'middle' });
-                p.addText('Renews at full price with annual uplift', { x: x1 + 0.28, y: fy + 0.55, w: cardW - 0.56, h: 0.3, fontSize: 9, italic: true, color: GRAY, fontFace: FONT });
+                const fy = cardY + cardH - 1.02;
+                p.addShape('rect', { x: x1 + 0.3, y: fy, w: cardW - 0.6, h: 0.012, fill: { color: BORDER }, line: { width: 0 } });
+                p.addText('Annual total', { x: x1 + 0.3, y: fy + 0.12, w: 2.8, h: 0.4, fontSize: 11, color: MUTED, fontFace: FONT, valign: 'middle' });
+                p.addText(money(y1Total), { x: x1 + cardW - 3.0, y: fy + 0.12, w: 2.7, h: 0.4, fontSize: 17, bold: true, color: NAVY, align: 'right', fontFace: FONT, valign: 'middle' });
+                p.addText('Renews at full price with annual uplift', { x: x1 + 0.3, y: fy + 0.58, w: cardW - 0.6, h: 0.28, fontSize: 9, italic: true, color: GRAY, fontFace: FONT });
               },
             });
 
-            // Card 2 — 2-Year (recommended)
+            // Card 2 — 2-Year (recommended, emphasised)
             drawCard(x2, {
               optLabel: 'OPTION 2', termLabel: '2-Year Contract', headFill: NAVY, border: BRONZE, borderW: 2.25, recommended: true,
-              items: rows.map((r) => [cleanName(r), money(rowY1in2Net(r))] as [string, string]),
+              itemRows: buildRows(rowY1in2Net),
               footer: () => {
-                const fy = cardY + cardH - 1.55;
-                p.addShape('rect', { x: x2 + 0.28, y: fy, w: cardW - 0.56, h: 0.014, fill: { color: BRONZE }, line: { width: 0 } });
+                const fy = cardY + cardH - 1.5;
+                p.addShape('rect', { x: x2 + 0.3, y: fy, w: cardW - 0.6, h: 0.012, fill: { color: BRONZE }, line: { width: 0 } });
                 p.addText(
                   [
-                    { text: `Year 1 (${y1}): `, options: { fontSize: 10.5, color: GRAY } },
-                    { text: `${money(two1)}`, options: { fontSize: 10.5, bold: true, color: NAVY } },
-                    { text: `     Year 2 (${y2}): `, options: { fontSize: 10.5, color: GRAY } },
-                    { text: `${money(two2)}`, options: { fontSize: 10.5, bold: true, color: NAVY } },
+                    { text: `Year 1 (${y1})  `, options: { fontSize: 10, color: MUTED } },
+                    { text: `${money(two1)}`, options: { fontSize: 10, bold: true, color: NAVY } },
+                    { text: `      Year 2 (${y2})  `, options: { fontSize: 10, color: MUTED } },
+                    { text: `${money(two2)}`, options: { fontSize: 10, bold: true, color: NAVY } },
                   ],
-                  { x: x2 + 0.28, y: fy + 0.08, w: cardW - 0.56, h: 0.32, fontFace: FONT, valign: 'middle' },
+                  { x: x2 + 0.3, y: fy + 0.1, w: cardW - 0.6, h: 0.3, fontFace: FONT, valign: 'middle' },
                 );
-                p.addText('2-year total', { x: x2 + 0.28, y: fy + 0.42, w: 2.8, h: 0.4, fontSize: 11, color: GRAY, fontFace: FONT, valign: 'middle' });
-                p.addText(money(twoTotal), { x: x2 + cardW - 3.0, y: fy + 0.42, w: 2.72, h: 0.4, fontSize: 17, bold: true, color: NAVY, align: 'right', fontFace: FONT, valign: 'middle' });
+                p.addText('2-year total', { x: x2 + 0.3, y: fy + 0.44, w: 2.8, h: 0.4, fontSize: 11, color: MUTED, fontFace: FONT, valign: 'middle' });
+                p.addText(money(twoTotal), { x: x2 + cardW - 3.0, y: fy + 0.44, w: 2.7, h: 0.4, fontSize: 17, bold: true, color: NAVY, align: 'right', fontFace: FONT, valign: 'middle' });
                 if (y1Saving > 0) {
-                  p.addText(`✓ Save ${money(y1Saving)} in year one · rate locked for 24 months`, { x: x2 + 0.28, y: fy + 0.9, w: cardW - 0.56, h: 0.32, fontSize: 9.5, bold: true, color: GREEN, fontFace: FONT, valign: 'middle' });
+                  p.addText(`Save ${money(y1Saving)} in year one · rate locked for 24 months`, { x: x2 + 0.3, y: fy + 0.92, w: cardW - 0.6, h: 0.3, fontSize: 9.5, bold: true, color: GREEN, fontFace: FONT, valign: 'middle' });
                 }
               },
             });
 
-            // Guiding caption under the cards
             const caption = y1Saving > 0
               ? `Commit to the 2-year contract to save ${money(y1Saving)} in year one and lock your rate against annual uplifts.`
               : 'The 2-year contract locks your rate for 24 months, protecting against annual uplifts.';
-            p.addText(caption, { x: 0.69, y: cardY + cardH + 0.12, w: cardW * 2 + gap, h: 0.4, fontSize: 11, italic: true, color: NAVY, align: 'center', fontFace: FONT });
+            p.addText(caption, { x: 0.69, y: cardY + cardH + 0.14, w: cardW * 2 + gap, h: 0.4, fontSize: 10.5, italic: true, color: MUTED, align: 'center', fontFace: FONT });
             return;
           }
 
-          // ── Single-term table (1y or 2y) ───────────────────────────────────
+          // ── Single-term table (1y or 2y), grouped by guide, vertically balanced
           const th = (t: string, align: any = 'left') => ({
-            text: t, options: { bold: true, color: 'FFFFFF', fill: { color: NAVY }, align, fontFace: FONT },
+            text: t, options: { bold: true, color: 'FFFFFF', fill: { color: NAVY }, align, fontFace: FONT, valign: 'middle' },
           });
           const td = (t: string, align: any = 'left', bold = false) => ({
-            text: t, options: { color: NAVY, align, bold, fontFace: FONT },
+            text: t, options: { color: NAVY, align, bold, fontFace: FONT, valign: 'middle' },
           });
+          const ncols = 3;
+          const guideRow = (g: string) => [{
+            text: g.toUpperCase(),
+            options: {
+              colspan: ncols, color: BRONZE, bold: true, fontSize: 9.5, charSpacing: 2,
+              align: 'left', valign: 'middle', fontFace: FONT, fill: { color: GHEAD },
+              border: [{ type: 'none' }, { type: 'none' }, { type: 'solid', color: BRONZE, pt: 0.5 }, { type: 'none' }],
+            },
+          }];
 
-          let head: any[]; let body: any[][]; let colW: number[];
+          let head: any[]; const body: any[][] = []; let colW: number[];
           if (term === '1y') {
             head = [th('Product'), th('Qty', 'center'), th('Price', 'right')];
-            body = rows.map((r) => [td(cleanName(r)), td(r.flat ? '—' : String(r.qty), 'center'), td(money(rowOneNet(r)), 'right')]);
+            for (const g of groups) {
+              if (g.guide) body.push(guideRow(g.guide));
+              for (const r of g.rows) body.push([td(cleanName(r)), td(r.flat ? '—' : String(r.qty), 'center'), td(money(rowOneNet(r)), 'right')]);
+            }
             body.push([td('Total', 'left', true), td('', 'center'), td(money(result.total), 'right', true)]);
             colW = [8.7, 1.3, 2.2];
           } else {
             head = [th('Product'), th(String(y1), 'right'), th(String(y2), 'right')];
-            body = rows.map((r) => [td(cleanName(r)), td(money(rowY1in2Net(r)), 'right'), td(money(rowY2Net(r)), 'right')]);
+            for (const g of groups) {
+              if (g.guide) body.push(guideRow(g.guide));
+              for (const r of g.rows) body.push([td(cleanName(r)), td(money(rowY1in2Net(r)), 'right'), td(money(rowY2Net(r)), 'right')]);
+            }
             body.push([td('Total', 'left', true), td(money(gdVat(sumRows(rowY1in2Net))), 'right', true), td(money(result.total2), 'right', true)]);
             colW = [7.2, 2.5, 2.5];
           }
 
+          const rowH = 0.44;
+          const tableH = (body.length + 1) * rowH;
+          const startY = Math.max(1.55, 1.6 + (4.85 - tableH) / 2);
           p.addTable([head, ...body], {
-            x: 0.55, y: 1.55, w: 12.2, colW, fontSize: 12.5, valign: 'middle',
-            border: { type: 'solid', color: BORDER, pt: 1 }, rowH: 0.42, autoPage: false,
+            x: 0.55, y: startY, w: 12.2, colW, fontSize: 12.5, valign: 'middle',
+            border: { type: 'solid', color: BORDER, pt: 0.75 }, rowH, autoPage: false,
           });
 
           if (quote.note.trim()) {
             p.addText(quote.note, {
-              x: 0.55, y: 6.55, w: 12.2, h: 0.35, fontSize: 10, italic: true, color: GRAY, fontFace: FONT,
+              x: 0.55, y: Math.min(6.55, startY + tableH + 0.2), w: 12.2, h: 0.35, fontSize: 10, italic: true, color: GRAY, fontFace: FONT,
             });
           }
         }, 'quoteCards');
