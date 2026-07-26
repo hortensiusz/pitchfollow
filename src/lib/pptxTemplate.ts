@@ -218,8 +218,7 @@ export async function buildTemplatePptx(app: AppState, priceList: PriceItem[]): 
               recommended?: boolean; itemRows: any[][]; footer: () => void;
             }) => {
               p.addShape('roundRect', { x, y: cardY, w: cardW, h: cardH, rectRadius: 0.08, fill: { color: CARD_BG }, line: { color: o.border, width: o.borderW } });
-              p.addShape('roundRect', { x, y: cardY, w: cardW, h: 0.68, rectRadius: 0.08, fill: { color: o.headFill }, line: { width: 0 } });
-              p.addShape('rect', { x, y: cardY + 0.36, w: cardW, h: 0.32, fill: { color: o.headFill }, line: { width: 0 } });
+              p.addShape('rect', { x, y: cardY, w: cardW, h: 0.68, fill: { color: o.headFill }, line: { width: 0 } });
               p.addText(
                 [
                   { text: o.optLabel + '\n', options: { fontSize: 9.5, bold: true, color: GOLD, charSpacing: 3 } },
