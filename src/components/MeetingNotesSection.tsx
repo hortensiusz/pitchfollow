@@ -6,10 +6,9 @@ import { Card } from './ui/Card';
 
 interface Props {
   onGenSections: () => void;
-  onMatchProducts: () => void;
 }
 
-export default function MeetingNotesSection({ onGenSections, onMatchProducts }: Props) {
+export default function MeetingNotesSection({ onGenSections }: Props) {
   const { app, setApp, uiLang, saveState } = useStore();
   const T = (k: Parameters<typeof t>[0]) => t(k, uiLang);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -93,9 +92,6 @@ export default function MeetingNotesSection({ onGenSections, onMatchProducts }: 
             </button>
             <button onClick={onGenSections} className="btn-primary text-sm">
               {T('btnGenSec')}
-            </button>
-            <button onClick={onMatchProducts} className="btn-ghost text-sm">
-              {T('btnMatch')}
             </button>
             <span className="text-xs text-[var(--muted)]">{T('hintNotes')}</span>
           </div>

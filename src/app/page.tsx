@@ -10,13 +10,9 @@ import MeetingNotesSection from '@/components/MeetingNotesSection';
 import ContentSection from '@/components/ContentSection';
 import QuoteSection from '@/components/QuoteSection';
 import CalcSection from '@/components/CalcSection';
-import PriceListDialog from '@/components/dialogs/PriceListDialog';
 import OutputPanel from '@/components/dialogs/OutputPanel';
-import MatchResult from '@/components/dialogs/MatchResult';
-import type { PriceItem } from '@/lib/types';
 
 type PanelKind = 'summary' | 'email' | null;
-interface MatchHit { p: PriceItem; hits: string[] }
 
 export default function Home() {
   const store = useStore();
@@ -24,13 +20,10 @@ export default function Home() {
   const T = useCallback((k: Parameters<typeof t>[0]) => t(k, uiLang), [uiLang]);
 
   const panelRef = useRef<HTMLDivElement>(null);
-  const [showPrices, setShowPrices] = useState(false);
   const [panel, setPanel] = useState<PanelKind>(null);
   const [panelTitle, setPanelTitle] = useState('');
   const [panelHint, setPanelHint] = useState('');
   const [panelContent, setPanelContent] = useState<string | [string, string, string]>('');
-  const [matchHits, setMatchHits] = useState<MatchHit[]>([]);
-  const [showMatch, setShowMatch] = useState(false);
 
   useEffect(() => { loadState(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
@@ -94,21 +87,6 @@ Rules:
       saveState();
       setStatus(T('genSecDone').replace('{n}', String(filled)));
     } catch (err: any) { alert(T('genFail') + err.message); setStatus(''); }
-  };
-
-  const matchProducts = () => {
-    const text = app.notes;
-    if (!text.trim()) { setMatchHits([]); setShowMatch(false); return; }
-    const results: MatchHit[] = [];
-    priceList.forEach(p => {
-      const kws = (p.kw || '').split(/[,，、;；]+/).map(k => k.trim()).filter(Boolean);
-      const hits = kws.filter(k => text.toLowerCase().includes(k.toLowerCase()));
-      if (hits.length) results.push({ p, hits });
-    });
-    results.sort((a, b) => b.hits.length - a.hits.length);
-    setMatchHits(results);
-    setShowMatch(true);
-    if (!results.length) alert(T('matchNoHit'));
   };
 
   const extractContacts = async () => {
@@ -205,14 +183,11 @@ Rules:
 
   return (
     <div className="min-h-screen bg-[var(--ground)]">
-      <AppHeader onSummary={genSummary} onEmail={genEmail} onPrices={() => setShowPrices(true)} />
+      <AppHeader onSummary={genSummary} onEmail={genEmail} />
 
       <main className="max-w-4xl mx-auto px-6 pt-10 pb-32 flex flex-col gap-8">
         <BasicInfoSection onExtractContacts={extractContacts} />
-        <MeetingNotesSection onGenSections={genSections} onMatchProducts={matchProducts} />
-        {showMatch && matchHits.length > 0 && (
-          <MatchResult results={matchHits} onClose={() => setShowMatch(false)} />
-        )}
+        <MeetingNotesSection onGenSections={genSections} />
         {SECTION_DEFS.map(def => <ContentSection key={def.id} def={def} />)}
         <CalcSection />
         <QuoteSection />
@@ -234,8 +209,6 @@ Rules:
           <button onClick={exportPPT} className="btn-primary px-8">{T('btnExport')}</button>
         </div>
       </div>
-
-      <PriceListDialog open={showPrices} onClose={() => setShowPrices(false)} />
     </div>
   );
 }

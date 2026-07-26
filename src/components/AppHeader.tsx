@@ -8,10 +8,9 @@ const LANGS: LangCode[] = ['en', 'zh', 'zhTW', 'fr', 'de', 'ptBR'];
 interface Props {
   onSummary: () => void;
   onEmail: () => void;
-  onPrices: () => void;
 }
 
-export default function AppHeader({ onSummary, onEmail, onPrices }: Props) {
+export default function AppHeader({ onSummary, onEmail }: Props) {
   const { uiLang, setUiLang, statusMsg } = useStore();
   const T = (k: Parameters<typeof t>[0]) => t(k, uiLang);
 
@@ -45,7 +44,6 @@ export default function AppHeader({ onSummary, onEmail, onPrices }: Props) {
           <span className="w-px h-4 bg-[var(--hairline-strong)] mx-1.5" />
           <HeaderBtn onClick={onSummary}>{T('btnSummary')}</HeaderBtn>
           <HeaderBtn onClick={onEmail}>{T('btnFollowupEmail')}</HeaderBtn>
-          <HeaderBtn onClick={onPrices}>{T('btnPrices')}</HeaderBtn>
         </div>
       </div>
     </header>
