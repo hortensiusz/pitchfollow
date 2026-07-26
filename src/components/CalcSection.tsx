@@ -143,6 +143,26 @@ export default function CalcSection() {
     return standaloneRows.find(r => r.id === 'plat') ?? null;
   })();
 
+  // For "no saving" combos, find the best adjacent bundle that DOES save
+  const bestUpgradeHint: { label: string; saving: number } | null = (() => {
+    if (!en || !_rc || !isRenewal || scenK === 0 || !standaloneRow) return null;
+    const standalonePitch = standaloneRow.pitch;
+    const currentPitch = en[11]![1 + 3 * scenK] as number;
+    if (standalonePitch - currentPitch > 0) return null; // already has saving
+    // Check all other scenarios for a better Platform price
+    let best: { label: string; saving: number } | null = null;
+    for (let k2 = 1; k2 <= 5; k2++) {
+      if (k2 === scenK) continue;
+      const p = en[11]![1 + 3 * k2] as number;
+      if (!p) continue;
+      const s = standalonePitch - p;
+      if (s > 0 && (!best || s > best.saving)) {
+        best = { label: SCEN_LABELS[k2], saving: s };
+      }
+    }
+    return best;
+  })();
+
   const handleEntryChange = (idx: number) => {
     setEntryIdx(idx);
     if (selectedFirm) {
@@ -269,12 +289,23 @@ export default function CalcSection() {
     const currentPitch = resolvePrice(r);
     const standalonePitch = standaloneRow.pitch;
     const saving = standalonePitch - currentPitch;
-    if (saving <= 0) return null;
-    return (
-      <div className="mt-1 text-xs text-emerald-600 font-medium">
-        Bundle saving: {fmt(saving)} vs standalone ({SCEN_LABELS[0]}: {fmt(standalonePitch)})
-      </div>
-    );
+    if (saving > 0) {
+      return (
+        <div className="mt-1 text-xs text-emerald-600 font-medium">
+          Bundle saving: {fmt(saving)} vs standalone ({SCEN_LABELS[0]}: {fmt(standalonePitch)})
+        </div>
+      );
+    }
+    if (bestUpgradeHint) {
+      return (
+        <div className="mt-1 text-xs text-amber-600 font-medium">
+          No bundle discount for this combination — add{' '}
+          <span className="font-semibold">{bestUpgradeHint.label}</span>{' '}
+          to save {fmt(bestUpgradeHint.saving)}
+        </div>
+      );
+    }
+    return null;
   };
 
   return (
