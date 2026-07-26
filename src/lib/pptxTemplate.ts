@@ -232,7 +232,7 @@ export async function buildTemplatePptx(app: AppState, priceList: PriceItem[]): 
               }
               p.addTable(o.itemRows, {
                 x: x + 0.3, y: cardY + 0.9, w: cardW - 0.6, colW: [cardW - 0.6 - 1.55, 1.55],
-                rowH: 0.32, valign: 'middle', border: { type: 'solid', color: 'EEEBE3', pt: 0.5 },
+                rowH: 0.32, valign: 'middle', border: { type: 'none' },
               });
               o.footer();
             };
@@ -282,11 +282,13 @@ export async function buildTemplatePptx(app: AppState, priceList: PriceItem[]): 
           }
 
           // ── Single-term table (1y or 2y), grouped by guide, vertically balanced
+          // Horizontal-only hairline (bottom edge) so cells are never boxed in
+          const HB = [{ type: 'none' }, { type: 'none' }, { type: 'solid', color: BORDER, pt: 0.5 }, { type: 'none' }];
           const th = (t: string, align: any = 'left') => ({
-            text: t, options: { bold: true, color: 'FFFFFF', fill: { color: NAVY }, align, fontFace: FONT, valign: 'middle' },
+            text: t, options: { bold: true, color: 'FFFFFF', fill: { color: NAVY }, align, fontFace: FONT, valign: 'middle', border: HB },
           });
           const td = (t: string, align: any = 'left', bold = false) => ({
-            text: t, options: { color: NAVY, align, bold, fontFace: FONT, valign: 'middle' },
+            text: t, options: { color: NAVY, align, bold, fontFace: FONT, valign: 'middle', border: HB },
           });
           const ncols = 3;
           const guideRow = (g: string) => [{
@@ -322,7 +324,7 @@ export async function buildTemplatePptx(app: AppState, priceList: PriceItem[]): 
           const startY = Math.max(1.55, 1.6 + (4.85 - tableH) / 2);
           p.addTable([head, ...body], {
             x: 0.55, y: startY, w: 12.2, colW, fontSize: 12.5, valign: 'middle',
-            border: { type: 'solid', color: BORDER, pt: 0.75 }, rowH, autoPage: false,
+            border: { type: 'none' }, rowH, autoPage: false,
           });
 
           if (quote.note.trim()) {
