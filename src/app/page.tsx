@@ -175,10 +175,30 @@ Rules:
   };
 
   const exportPPT = async () => {
-    setStatus('Generating PPTX…', 30000);
+    setStatus('Generating PPTX…', 60000);
     try {
-      const { exportPPTX } = await import('@/lib/pptxService');
-      await exportPPTX(app, priceList);
+      const res = await fetch('/api/pptx', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ app, priceList }),
+      });
+      if (!res.ok) {
+        let msg = `${res.status}`;
+        try { msg = (await res.json()).error ?? msg; } catch {}
+        throw new Error(msg);
+      }
+      const blob = await res.blob();
+      const cd = res.headers.get('Content-Disposition') || '';
+      const m = cd.match(/filename="([^"]+)"/);
+      const fname = m ? m[1] : 'Follow-up.pptx';
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fname;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
       setStatus(T('flashPptDownloaded'));
     } catch (err: any) { alert('PPTX export failed: ' + err.message); setStatus(''); }
   };
