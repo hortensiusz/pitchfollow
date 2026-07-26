@@ -204,10 +204,10 @@ Rules:
   };
 
   return (
-    <div className="min-h-screen bg-[#f4f6f9]">
+    <div className="min-h-screen bg-[var(--ground)]">
       <AppHeader onSummary={genSummary} onEmail={genEmail} onPrices={() => setShowPrices(true)} />
 
-      <main className="max-w-4xl mx-auto px-4 py-6 flex flex-col gap-5 pb-24">
+      <main className="max-w-4xl mx-auto px-6 pt-10 pb-32 flex flex-col gap-8">
         <BasicInfoSection onExtractContacts={extractContacts} />
         <MeetingNotesSection onGenSections={genSections} onMatchProducts={matchProducts} />
         {showMatch && matchHits.length > 0 && (
@@ -225,12 +225,14 @@ Rules:
         )}
       </main>
 
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-6 py-3 flex justify-center gap-4 shadow-lg z-40">
-        <button
-          onClick={() => { if (confirm(T('confirmReset'))) resetAll(); }}
-          className="px-4 py-2 text-sm border border-gray-200 rounded-lg text-red-600 hover:bg-red-50 transition-colors"
-        >{T('btnReset')}</button>
-        <button onClick={exportPPT} className="btn-primary text-sm px-8">{T('btnExport')}</button>
+      <div className="fixed bottom-0 left-0 right-0 bg-[var(--ground)]/90 backdrop-blur-sm border-t border-[var(--hairline)] z-40">
+        <div className="max-w-4xl mx-auto px-6 py-3.5 flex justify-between items-center gap-4">
+          <button
+            onClick={() => { if (confirm(T('confirmReset'))) resetAll(); }}
+            className="text-[13px] text-[var(--muted)] hover:text-[#a3312a] transition-colors"
+          >{T('btnReset')}</button>
+          <button onClick={exportPPT} className="btn-primary px-8">{T('btnExport')}</button>
+        </div>
       </div>
 
       <PriceListDialog open={showPrices} onClose={() => setShowPrices(false)} />

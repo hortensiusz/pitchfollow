@@ -66,7 +66,7 @@ export default function MeetingNotesSection({ onGenSections, onMatchProducts }: 
   return (
     <Card>
       <details open={open} onToggle={e => setOpen((e.target as HTMLDetailsElement).open)}>
-        <summary className="cursor-pointer font-semibold text-[#1e3a5f] text-sm select-none">
+        <summary className="cursor-pointer font-semibold text-[#002B49] text-sm select-none">
           {T('sumNotes')}
         </summary>
         <div className="mt-3">
@@ -97,7 +97,7 @@ export default function MeetingNotesSection({ onGenSections, onMatchProducts }: 
             <button onClick={onMatchProducts} className="btn-ghost text-sm">
               {T('btnMatch')}
             </button>
-            <span className="text-xs text-gray-400">{T('hintNotes')}</span>
+            <span className="text-xs text-[var(--muted)]">{T('hintNotes')}</span>
           </div>
         </div>
       </details>

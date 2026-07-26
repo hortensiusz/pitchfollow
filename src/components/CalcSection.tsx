@@ -341,7 +341,7 @@ export default function CalcSection() {
   return (
     <Card>
       <details open={open} onToggle={e => setOpen((e.target as HTMLDetailsElement).open)}>
-        <summary className="cursor-pointer font-semibold text-[#1e3a5f] text-sm select-none">
+        <summary className="cursor-pointer font-semibold text-[#002B49] text-sm select-none">
           FY27 Rate Card Calculator
         </summary>
         <div className="mt-3 space-y-3">
@@ -368,14 +368,14 @@ export default function CalcSection() {
             {showSug && (
               <div
                 ref={sugRef}
-                className="absolute z-40 left-0 right-0 top-full mt-0.5 bg-white border border-gray-200 rounded-lg shadow-lg max-h-52 overflow-y-auto text-sm"
+                className="absolute z-40 left-0 right-0 top-full mt-0.5 bg-white border border-[var(--hairline)] rounded-md max-h-52 overflow-y-auto text-sm"
               >
                 {suggestions.length === 0 ? (
-                  <div className="px-3 py-2 text-gray-400">No firm found</div>
+                  <div className="px-3 py-2 text-[var(--muted)]">No firm found</div>
                 ) : suggestions.map((f, i) => (
                   <div
                     key={i}
-                    className="px-3 py-1.5 cursor-pointer hover:bg-blue-50 text-gray-800"
+                    className="px-3 py-1.5 cursor-pointer hover:bg-[var(--beige)]/50 text-[#002B49]"
                     onClick={() => selectFirm(f)}
                   >
                     {f.n}
@@ -401,7 +401,7 @@ export default function CalcSection() {
                 </select>
               </div>
               {en && (
-                <div className="text-xs text-gray-500 pb-1">
+                <div className="text-xs text-[var(--muted)] pb-1">
                   {en[2]}{en[3] ? ` · ${en[3]}` : ''} · Seg: {en[1]}
                   {en[11]
                     ? <span className="ml-2 px-1.5 py-0.5 bg-amber-100 text-amber-800 rounded text-xs font-medium">Renewal</span>
@@ -429,7 +429,7 @@ export default function CalcSection() {
                 </div>
               ) : (
                 <div className="pb-1">
-                  <span className="px-2 py-1 bg-gray-100 text-gray-500 rounded text-xs font-medium border border-gray-200">
+                  <span className="px-2 py-1 bg-[var(--beige)] text-[var(--muted)] rounded text-xs font-medium border border-[var(--hairline)]">
                     New business pricing
                   </span>
                 </div>
@@ -466,27 +466,27 @@ export default function CalcSection() {
                 const price = resolvePrice(r);
                 const belowFloor = price < r.lo - 0.5;
                 return (
-                  <div key={r.id} className="flex items-start gap-2 p-2.5 rounded-lg bg-gray-50 border border-gray-100">
+                  <div key={r.id} className="flex items-start gap-2 p-2.5 rounded-md bg-[#FAF9F6] border border-[var(--hairline)]">
                     <input
                       type="checkbox"
                       checked={!!checks[r.id]}
                       onChange={e => setChecks(c => ({ ...c, [r.id]: e.target.checked }))}
-                      className="mt-1 accent-[#1e3a5f] w-4 h-4 flex-none"
+                      className="mt-1 accent-[#002B49] w-4 h-4 flex-none"
                     />
                     <div className="flex-1 min-w-0">
-                      <div className="font-medium text-sm text-[#1e3a5f]">{r.n}</div>
-                      <div className="text-xs text-gray-500 mt-0.5 flex flex-wrap gap-x-4 gap-y-0.5">
-                        <span><span className="text-gray-400">Max</span> {fmt(r.hi)}</span>
-                        <span><span className="text-gray-400">Pitch</span> {fmt(r.pitch)}</span>
-                        <span><span className="text-gray-400">REP floor</span> {fmt(r.rep)}</span>
-                        <span><span className="text-gray-400">MGR floor</span> {fmt(r.lo)}</span>
-                        {r.extra && <span className="text-gray-400">{r.extra}</span>}
+                      <div className="font-medium text-sm text-[#002B49]">{r.n}</div>
+                      <div className="text-xs text-[var(--muted)] mt-0.5 flex flex-wrap gap-x-4 gap-y-0.5">
+                        <span><span className="text-[var(--muted)]">Max</span> {fmt(r.hi)}</span>
+                        <span><span className="text-[var(--muted)]">Pitch</span> {fmt(r.pitch)}</span>
+                        <span><span className="text-[var(--muted)]">REP floor</span> {fmt(r.rep)}</span>
+                        <span><span className="text-[var(--muted)]">MGR floor</span> {fmt(r.lo)}</span>
+                        {r.extra && <span className="text-[var(--muted)]">{r.extra}</span>}
                       </div>
                       {renderFy26(r, resolvePrice(r))}
                       {renderBundleSaving(r)}
                     </div>
                     <div className="flex flex-col items-end gap-0.5">
-                      <label className="text-xs text-gray-400">Final price</label>
+                      <label className="text-xs text-[var(--muted)]">Final price</label>
                       <input
                         type="number" min={0} step={50}
                         disabled={!checks[r.id]}
@@ -509,35 +509,35 @@ export default function CalcSection() {
 
                 {/* Option 1: 1-Year */}
                 <div>
-                  <div className="text-xs font-semibold text-[#1e3a5f] px-1 pb-1.5 mb-2 border-b border-[#1e3a5f]/20 flex justify-between items-center">
+                  <div className="text-xs font-semibold text-[#002B49] px-1 pb-1.5 mb-2 border-b border-[#002B49]/20 flex justify-between items-center">
                     <span>Option 1 — 1-Year</span>
-                    <span className="font-normal text-gray-400">Pitch price</span>
+                    <span className="font-normal text-[var(--muted)]">Pitch price</span>
                   </div>
                   <div className="space-y-2">
                     {rows.map(r => {
                       const price = resolvePrice(r);
                       const belowFloor = price < r.lo - 0.5;
                       return (
-                        <div key={r.id} className="flex items-start gap-2 p-2.5 rounded-lg bg-gray-50 border border-gray-100">
+                        <div key={r.id} className="flex items-start gap-2 p-2.5 rounded-md bg-[#FAF9F6] border border-[var(--hairline)]">
                           <input
                             type="checkbox"
                             checked={!!checks[r.id]}
                             onChange={e => setChecks(c => ({ ...c, [r.id]: e.target.checked }))}
-                            className="mt-1 accent-[#1e3a5f] w-4 h-4 flex-none"
+                            className="mt-1 accent-[#002B49] w-4 h-4 flex-none"
                           />
                           <div className="flex-1 min-w-0">
-                            <div className="font-medium text-sm text-[#1e3a5f]">{r.n}</div>
-                            <div className="text-xs text-gray-500 mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5">
-                              <span><span className="text-gray-400">Max</span> {fmt(r.hi)}</span>
-                              <span><span className="text-gray-400">Pitch</span> {fmt(r.pitch)}</span>
-                              <span><span className="text-gray-400">REP</span> {fmt(r.rep)}</span>
-                              <span><span className="text-gray-400">MGR</span> {fmt(r.lo)}</span>
+                            <div className="font-medium text-sm text-[#002B49]">{r.n}</div>
+                            <div className="text-xs text-[var(--muted)] mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5">
+                              <span><span className="text-[var(--muted)]">Max</span> {fmt(r.hi)}</span>
+                              <span><span className="text-[var(--muted)]">Pitch</span> {fmt(r.pitch)}</span>
+                              <span><span className="text-[var(--muted)]">REP</span> {fmt(r.rep)}</span>
+                              <span><span className="text-[var(--muted)]">MGR</span> {fmt(r.lo)}</span>
                             </div>
                             {renderFy26(r, resolvePrice(r))}
                             {renderBundleSaving(r)}
                           </div>
                           <div className="flex flex-col items-end gap-0.5">
-                            <label className="text-xs text-gray-400">1yr price</label>
+                            <label className="text-xs text-[var(--muted)]">1yr price</label>
                             <input
                               type="number" min={0} step={50}
                               disabled={!checks[r.id]}
@@ -551,7 +551,7 @@ export default function CalcSection() {
                       );
                     })}
                   </div>
-                  <div className="mt-2 px-1 text-right text-xs text-[#1e3a5f] font-medium">
+                  <div className="mt-2 px-1 text-right text-xs text-[#002B49] font-medium">
                     Selected total: {fmt(rows.filter(r => checks[r.id]).reduce((s, r) => s + resolvePrice(r), 0))}
                   </div>
                 </div>
@@ -560,7 +560,7 @@ export default function CalcSection() {
                 <div>
                   <div className="text-xs font-semibold text-emerald-700 px-1 pb-1.5 mb-2 border-b border-emerald-200 flex justify-between items-center">
                     <span>Option 2 — 2-Year Contract</span>
-                    <span className="font-normal text-gray-500">Y1 −{twoYrDisc}% · Y2 default +{y2Uplift}%</span>
+                    <span className="font-normal text-[var(--muted)]">Y1 −{twoYrDisc}% · Y2 default +{y2Uplift}%</span>
                   </div>
                   <div className="space-y-2">
                     {rows.map(r => {
@@ -570,11 +570,11 @@ export default function CalcSection() {
                       const y1BelowFloor = y1 < r.lo - 0.5;
                       const isChecked = !!checks[r.id];
                       return (
-                        <div key={r.id} className={`p-2.5 rounded-lg border transition-opacity ${isChecked ? 'bg-emerald-50/40 border-emerald-100' : 'bg-gray-50 border-gray-100 opacity-50'}`}>
+                        <div key={r.id} className={`p-2.5 rounded-md border transition-opacity ${isChecked ? 'bg-[#EEF3EE]/40 border-emerald-100' : 'bg-[#FAF9F6] border-[var(--hairline)] opacity-50'}`}>
                           <div className="font-medium text-sm text-emerald-800 mb-1.5">{r.n}</div>
                           <div className="flex gap-2">
                             <div className="flex flex-col gap-0.5 flex-1">
-                              <label className="text-xs text-gray-400">Y1 price</label>
+                              <label className="text-xs text-[var(--muted)]">Y1 price</label>
                               <input
                                 type="number" min={0} step={50}
                                 disabled={!isChecked}
@@ -588,7 +588,7 @@ export default function CalcSection() {
                               {y1BelowFloor && <span className="text-red-500 text-xs">Below MGR</span>}
                             </div>
                             <div className="flex flex-col gap-0.5" style={{ width: '4.5rem' }}>
-                              <label className="text-xs text-gray-400">Uplift %</label>
+                              <label className="text-xs text-[var(--muted)]">Uplift %</label>
                               <input
                                 type="number" min={0} step={0.5}
                                 disabled={!isChecked}
@@ -601,7 +601,7 @@ export default function CalcSection() {
                               />
                             </div>
                             <div className="flex flex-col gap-0.5 flex-1">
-                              <label className="text-xs text-gray-400">Y2 price</label>
+                              <label className="text-xs text-[var(--muted)]">Y2 price</label>
                               <input
                                 type="number" min={0} step={50}
                                 disabled={!isChecked}
@@ -629,14 +629,14 @@ export default function CalcSection() {
           )}
 
           {selectedFirm && en && rows.length === 0 && (
-            <p className="text-sm text-gray-400">No pricing data available for this entry.</p>
+            <p className="text-sm text-[var(--muted)]">No pricing data available for this entry.</p>
           )}
 
           {/* Bundle rules (collapsed) */}
           {_rc && _rc.bundleRules && _rc.bundleRules.length > 0 && (
-            <details className="text-xs text-gray-500">
-              <summary className="cursor-pointer hover:text-gray-700 select-none">Bundle rules reference</summary>
-              <div className="mt-1 space-y-1 pl-2 border-l-2 border-gray-100 max-h-40 overflow-y-auto">
+            <details className="text-xs text-[var(--muted)]">
+              <summary className="cursor-pointer hover:text-[#3A4A57] select-none">Bundle rules reference</summary>
+              <div className="mt-1 space-y-1 pl-2 border-l-2 border-[var(--hairline)] max-h-40 overflow-y-auto">
                 {_rc.bundleRules.map((br, i) => (
                   <div key={i}>
                     <strong>{br.region}</strong> · {br.scenario} · {br.bundle} · {br.product}:
@@ -654,13 +654,13 @@ export default function CalcSection() {
             const net1yr = Math.round(gross1yr * (1 - pkgDisc / 100));
             const checkedCount = selRows.length;
             return checkedCount > 0 ? (
-              <div className="rounded-lg bg-gray-50 border border-gray-100 px-3 py-2.5 space-y-2">
+              <div className="rounded-md bg-[#FAF9F6] border border-[var(--hairline)] px-3 py-2.5 space-y-2">
                 <div className="flex flex-wrap gap-3 items-center">
-                  <span className="text-xs font-medium text-gray-600 flex-1">
+                  <span className="text-xs font-medium text-[var(--muted)] flex-1">
                     {checkedCount} product{checkedCount > 1 ? 's' : ''} selected
                   </span>
                   {checkedCount > 1 && (
-                    <label className="flex items-center gap-1.5 text-xs text-gray-500">
+                    <label className="flex items-center gap-1.5 text-xs text-[var(--muted)]">
                       Package discount
                       <input
                         type="number" min={0} max={100} step={0.5}
@@ -674,19 +674,19 @@ export default function CalcSection() {
                 </div>
                 {!showBoth && (
                   <div className="flex justify-between text-xs">
-                    <span className="text-gray-400">1yr gross: {fmt(gross1yr)}</span>
-                    {pkgDisc > 0 && <span className="font-semibold text-[#1e3a5f]">After discount: {fmt(net1yr)}</span>}
+                    <span className="text-[var(--muted)]">1yr gross: {fmt(gross1yr)}</span>
+                    {pkgDisc > 0 && <span className="font-semibold text-[#002B49]">After discount: {fmt(net1yr)}</span>}
                   </div>
                 )}
                 {showBoth && (
                   <div className="grid grid-cols-2 gap-2 text-xs">
                     <div>
-                      <div className="text-gray-400">1yr gross: {fmt(gross1yr)}</div>
-                      {pkgDisc > 0 && <div className="font-semibold text-[#1e3a5f]">After discount: {fmt(net1yr)}</div>}
+                      <div className="text-[var(--muted)]">1yr gross: {fmt(gross1yr)}</div>
+                      {pkgDisc > 0 && <div className="font-semibold text-[#002B49]">After discount: {fmt(net1yr)}</div>}
                     </div>
                     <div>
-                      <div className="text-gray-400">2yr Y1: {fmt(selRows.reduce((s, r) => s + resolveY1in2yr(r), 0))}</div>
-                      <div className="text-gray-400">2yr Y2: {fmt(selRows.reduce((s, r) => s + resolveY2(r), 0))}</div>
+                      <div className="text-[var(--muted)]">2yr Y1: {fmt(selRows.reduce((s, r) => s + resolveY1in2yr(r), 0))}</div>
+                      <div className="text-[var(--muted)]">2yr Y2: {fmt(selRows.reduce((s, r) => s + resolveY2(r), 0))}</div>
                       {pkgDisc > 0 && <div className="font-semibold text-emerald-700">Y1 after disc: {fmt(Math.round(selRows.reduce((s, r) => s + resolveY1in2yr(r), 0) * (1 - pkgDisc / 100)))}</div>}
                     </div>
                   </div>
@@ -697,8 +697,8 @@ export default function CalcSection() {
 
           {/* Write-to-quote actions */}
           {rows.length > 0 && (
-            <div className="flex flex-wrap gap-2 items-center border-t border-gray-100 pt-3 mt-1">
-              <span className="text-xs text-gray-400 flex-1">Floors shown here are internal — not exported to PPT.</span>
+            <div className="flex flex-wrap gap-2 items-center border-t border-[var(--hairline)] pt-3 mt-1">
+              <span className="text-xs text-[var(--muted)] flex-1">Floors shown here are internal — not exported to PPT.</span>
               <input
                 type="text"
                 className="field-input text-sm w-56"

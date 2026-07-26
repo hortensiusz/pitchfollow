@@ -22,10 +22,10 @@ export default function MatchResult({ results, onClose }: Props) {
   return (
     <div className="mt-3">
       {results.map((r, i) => (
-        <div key={i} className="flex items-center gap-3 p-2.5 border border-gray-200 rounded-lg mb-2 text-sm bg-gray-50">
+        <div key={i} className="flex items-center gap-3 p-2.5 border border-[var(--hairline)] rounded-md mb-2 text-sm bg-[#FAF9F6]">
           <span className="flex-1">
             <strong>{r.p.name}</strong>
-            <span className="text-gray-400 ml-2">{T('matchHitLabel')}{r.hits.join(', ')}</span>
+            <span className="text-[var(--muted)] ml-2">{T('matchHitLabel')}{r.hits.join(', ')}</span>
           </span>
           <button
             onClick={() => {
@@ -36,7 +36,7 @@ export default function MatchResult({ results, onClose }: Props) {
           >{T('btnAddToQuote')}</button>
         </div>
       ))}
-      <button onClick={onClose} className="text-xs text-gray-400 hover:text-gray-600 mt-1">
+      <button onClick={onClose} className="text-xs text-[var(--muted)] hover:text-[var(--muted)] mt-1">
         {T('btnClose')}
       </button>
     </div>

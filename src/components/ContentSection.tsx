@@ -32,18 +32,18 @@ export default function ContentSection({ def }: Props) {
   return (
     <Card className={!sec.inc ? 'opacity-70' : ''}>
       <div className="flex items-center gap-3 mb-3">
-        <label className="flex items-center gap-1.5 cursor-pointer select-none text-sm text-gray-500">
+        <label className="flex items-center gap-1.5 cursor-pointer select-none text-sm text-[var(--muted)]">
           <input
             type="checkbox"
             checked={sec.inc}
             onChange={e => { setSection(def.id, { inc: e.target.checked }); saveState(); }}
-            className="accent-[#1e3a5f] w-4 h-4"
+            className="accent-[#002B49] w-4 h-4"
           />
           <span>{T('lblWriteToPpt')}</span>
         </label>
         <input
           type="text"
-          className="flex-1 font-semibold text-[#1e3a5f] text-base bg-transparent border-b border-transparent hover:border-gray-200 focus:border-[#1e3a5f] outline-none transition-colors"
+          className="flex-1 font-semibold text-[#002B49] text-base bg-transparent border-b border-transparent hover:border-[var(--hairline)] focus:border-[#002B49] outline-none transition-colors"
           value={sec.title}
           onChange={e => { setSection(def.id, { title: e.target.value }); saveState(); }}
         />
@@ -57,7 +57,7 @@ export default function ContentSection({ def }: Props) {
               checked={item.c}
               title={T('titleItemCk')}
               onChange={e => updateItem(i, { c: e.target.checked })}
-              className="accent-[#1e3a5f] w-4 h-4 mt-2 flex-none"
+              className="accent-[#002B49] w-4 h-4 mt-2 flex-none"
             />
             <textarea
               className="field-input flex-1 min-h-[38px] resize-none text-sm"
@@ -73,13 +73,13 @@ export default function ContentSection({ def }: Props) {
             />
             <button
               onClick={() => removeItem(i)}
-              className="text-gray-300 hover:text-red-500 text-lg px-1 mt-1 flex-none"
+              className="text-[var(--faint)] hover:text-red-500 text-lg px-1 mt-1 flex-none"
             >✕</button>
           </div>
         ))}
         <button
           onClick={addItem}
-          className="w-full border border-dashed border-gray-300 rounded-md py-1.5 text-sm text-gray-500 hover:bg-gray-50 mt-1"
+          className="w-full border border-dashed border-[var(--hairline-strong)] rounded-md py-1.5 text-sm text-[var(--muted)] hover:bg-[#FAF9F6] mt-1"
         >
           {T('btnAddItem')}
         </button>

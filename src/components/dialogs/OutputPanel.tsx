@@ -39,19 +39,19 @@ export default function OutputPanel({ kind, title, hint, content, onClose }: Pro
   ];
 
   return (
-    <div className="bg-white border border-gray-200 rounded-xl p-5">
+    <div className="bg-white border border-[var(--hairline)] rounded-md p-5">
       <div className="flex justify-between items-start mb-3">
         <div>
-          <h3 className="font-semibold text-[#1e3a5f]">{title}</h3>
-          <p className="text-xs text-gray-500 mt-0.5">{hint}</p>
+          <h3 className="font-semibold text-[#002B49]">{title}</h3>
+          <p className="text-xs text-[var(--muted)] mt-0.5">{hint}</p>
         </div>
-        <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl px-1">✕</button>
+        <button onClick={onClose} className="text-[var(--muted)] hover:text-[var(--muted)] text-xl px-1">✕</button>
       </div>
       {texts.map((text, i) => (
         <div key={i} className={i > 0 ? 'mt-4' : ''}>
           {!isSingle && (
             <div className="flex justify-between items-center mb-1">
-              <b className="text-sm text-[#1e3a5f]">{versionLabels[i]}</b>
+              <b className="text-sm text-[#002B49]">{versionLabels[i]}</b>
               <button onClick={() => copyText(text)} className="btn-ghost text-xs py-0.5 px-2">{T('btnCopy')}</button>
             </div>
           )}

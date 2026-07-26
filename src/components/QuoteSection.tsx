@@ -38,18 +38,18 @@ export default function QuoteSection() {
     <Card>
       {/* Section header */}
       <div className="flex items-center gap-3 mb-4">
-        <label className="flex items-center gap-1.5 cursor-pointer select-none text-sm text-gray-500">
+        <label className="flex items-center gap-1.5 cursor-pointer select-none text-sm text-[var(--muted)]">
           <input
             type="checkbox"
             checked={q.inc}
             onChange={e => { setQuote({ inc: e.target.checked }); saveState(); }}
-            className="accent-[#1e3a5f] w-4 h-4"
+            className="accent-[#002B49] w-4 h-4"
           />
           <span>{T('lblWriteToPpt')}</span>
         </label>
         <input
           type="text"
-          className="flex-1 font-semibold text-[#1e3a5f] text-base bg-transparent border-b border-transparent hover:border-gray-200 focus:border-[#1e3a5f] outline-none"
+          className="flex-1 font-semibold text-[#002B49] text-base bg-transparent border-b border-transparent hover:border-[var(--hairline)] focus:border-[#002B49] outline-none"
           value={q.title}
           onChange={e => { setQuote({ title: e.target.value }); saveState(); }}
         />
@@ -87,7 +87,7 @@ export default function QuoteSection() {
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-gray-200 text-gray-400 text-left">
+            <tr className="border-b border-[var(--hairline)] text-[var(--muted)] text-left">
               <th className="py-2 px-2 font-medium w-[36%]">{T('thItem')}</th>
               <th className="py-2 px-2 font-medium w-[10%]">{T('thQty')}</th>
               <th className="py-2 px-2 font-medium w-[16%]">{T('thPrice')}</th>
@@ -100,7 +100,7 @@ export default function QuoteSection() {
             {q.rows.map((r, i) => {
               const sub = rowOneNet(r);
               return (
-                <tr key={i} className="border-b border-gray-100">
+                <tr key={i} className="border-b border-[var(--hairline)]">
                   <td className="py-1 px-2">
                     <input
                       type="text"
@@ -110,34 +110,34 @@ export default function QuoteSection() {
                       placeholder={T('phRowName')}
                       onChange={e => handleNameChange(i, e.target.value)}
                     />
-                    {r.guide && <div className="text-xs text-gray-400 mt-0.5">Guide: {r.guide}</div>}
+                    {r.guide && <div className="text-xs text-[var(--muted)] mt-0.5">Guide: {r.guide}</div>}
                     {r.parts && r.parts.length > 0 && (
-                      <div className="text-xs text-gray-400 mt-0.5">Bundle: {r.parts.join(' / ')}</div>
+                      <div className="text-xs text-[var(--muted)] mt-0.5">Bundle: {r.parts.join(' / ')}</div>
                     )}
-                    {r.flat && <div className="text-xs text-gray-400 mt-0.5">Flat total · {r.qty} dept{r.qty !== 1 ? 's' : ''}</div>}
+                    {r.flat && <div className="text-xs text-[var(--muted)] mt-0.5">Flat total · {r.qty} dept{r.qty !== 1 ? 's' : ''}</div>}
                   </td>
                   <td className="py-1 px-2">
                     <input type="number" className="field-input w-full text-sm" min={0} step={1} value={r.qty}
                       onChange={e => updateRow(i, { qty: +e.target.value })} />
-                    {r.flat && <div className="text-xs text-gray-400 mt-0.5">depts</div>}
+                    {r.flat && <div className="text-xs text-[var(--muted)] mt-0.5">depts</div>}
                   </td>
                   <td className="py-1 px-2">
                     <input type="number" className="field-input w-full text-sm" min={0} step={0.01} value={r.price}
                       onChange={e => updateRow(i, { price: +e.target.value })} />
                     {r.floor > 0 && (
-                      <div className="text-xs text-gray-400 mt-0.5">Floor: {money(r.floor)}</div>
+                      <div className="text-xs text-[var(--muted)] mt-0.5">Floor: {money(r.floor)}</div>
                     )}
                   </td>
                   <td className="py-1 px-2">
                     <input type="number" className="field-input w-full text-sm" min={0} max={100} step={0.5} value={r.disc}
                       onChange={e => updateRow(i, { disc: +e.target.value })} />
                   </td>
-                  <td className="py-1 px-2 text-right font-medium text-[#1e3a5f]">
+                  <td className="py-1 px-2 text-right font-medium text-[#002B49]">
                     {r.name || r.qty ? money(sub) : '—'}
                   </td>
                   <td className="py-1 px-2">
                     <button onClick={() => { removeQuoteRow(i); saveState(); }}
-                      className="text-gray-300 hover:text-red-500 text-lg px-1">✕</button>
+                      className="text-[var(--faint)] hover:text-red-500 text-lg px-1">✕</button>
                   </td>
                 </tr>
               );
@@ -151,28 +151,28 @@ export default function QuoteSection() {
       </datalist>
 
       <button onClick={() => { addQuoteRow(); saveState(); }}
-        className="w-full border border-dashed border-gray-300 rounded-md py-1.5 text-sm text-gray-500 hover:bg-gray-50 mt-2">
+        className="w-full border border-dashed border-[var(--hairline-strong)] rounded-md py-1.5 text-sm text-[var(--muted)] hover:bg-[#FAF9F6] mt-2">
         {T('btnAddQuote')}
       </button>
 
       {/* Options row */}
       <div className="flex flex-wrap gap-4 mt-3 text-sm items-center">
         <div className="flex items-center gap-1.5">
-          <span className="text-gray-500">{T('lblGlobalDisc')}</span>
+          <span className="text-[var(--muted)]">{T('lblGlobalDisc')}</span>
           <input type="number" className="field-input w-20" value={q.gd} min={0} max={100} step={0.5}
             onChange={e => { setQuote({ gd: +e.target.value }); saveState(); }} />
         </div>
         <label className="flex items-center gap-1.5 cursor-pointer">
           <input type="checkbox" checked={q.vat}
             onChange={e => { setQuote({ vat: e.target.checked }); saveState(); }}
-            className="accent-[#1e3a5f] w-4 h-4" />
-          <span className="text-gray-600">{T('lblVat')}</span>
+            className="accent-[#002B49] w-4 h-4" />
+          <span className="text-[var(--muted)]">{T('lblVat')}</span>
         </label>
         <label className="flex items-center gap-1.5 cursor-pointer">
           <input type="checkbox" checked={q.prodIntro}
             onChange={e => { setQuote({ prodIntro: e.target.checked }); saveState(); }}
-            className="accent-[#1e3a5f] w-4 h-4" />
-          <span className="text-gray-600">{T('lblProdIntro')}</span>
+            className="accent-[#002B49] w-4 h-4" />
+          <span className="text-[var(--muted)]">{T('lblProdIntro')}</span>
         </label>
       </div>
 
@@ -190,7 +190,7 @@ export default function QuoteSection() {
           {showTwoYrControls && (
             <div className="mt-3 flex flex-col items-end gap-0.5">
               {q.term === 'both' && (
-                <div className="text-xs text-gray-400 font-medium uppercase tracking-wide mb-1 min-w-[280px] text-right">
+                <div className="text-xs text-[var(--muted)] font-medium uppercase tracking-wide mb-1 min-w-[280px] text-right">
                   2-YEAR CONTRACT
                 </div>
               )}
@@ -204,9 +204,9 @@ export default function QuoteSection() {
                 sub={result.sub2} gd={q.gd} afterDisc={result.afterDisc2}
                 vat={result.vat2} total={result.total2} vatOn={q.vat} money={money}
               />
-              <div className="flex gap-6 min-w-[280px] justify-between border-t-2 border-[#1e3a5f] pt-2 mt-1">
+              <div className="flex gap-6 min-w-[280px] justify-between border-t-2 border-[#002B49] pt-2 mt-1">
                 <span className="font-semibold">2-year total:</span>
-                <strong className="text-[#1e3a5f] text-base">{money(result.grand2y)}</strong>
+                <strong className="text-[#002B49] text-base">{money(result.grand2y)}</strong>
               </div>
             </div>
           )}
@@ -241,21 +241,21 @@ interface TotalsBlockProps {
 
 function TotalsBlock({ heading, totalLabel, sub, gd, afterDisc, vat, total, vatOn, money }: TotalsBlockProps) {
   const Row = ({ l, v, indent }: { l: string; v: string; indent?: boolean }) => (
-    <div className={`flex gap-6 min-w-[280px] justify-between ${indent ? 'text-gray-400' : ''}`}>
-      <span className="text-gray-500">{l}</span>
+    <div className={`flex gap-6 min-w-[280px] justify-between ${indent ? 'text-[var(--muted)]' : ''}`}>
+      <span className="text-[var(--muted)]">{l}</span>
       <span>{v}</span>
     </div>
   );
   return (
     <div className="mt-1 flex flex-col gap-0.5">
-      {heading && <div className="text-xs text-gray-400 font-medium uppercase tracking-wide mb-1">{heading}</div>}
+      {heading && <div className="text-xs text-[var(--muted)] font-medium uppercase tracking-wide mb-1">{heading}</div>}
       <Row l="Subtotal:" v={money(sub)} />
       {gd > 0 && <Row l={`Global discount (${gd}%):`} v={`−${money(sub - afterDisc)}`} indent />}
       {gd > 0 && <Row l="After discount:" v={money(afterDisc)} />}
       {vatOn && <Row l="VAT (20%):" v={`+${money(vat)}`} indent />}
-      <div className="flex gap-6 min-w-[280px] justify-between border-t border-gray-300 pt-1 mt-0.5">
+      <div className="flex gap-6 min-w-[280px] justify-between border-t border-[var(--hairline-strong)] pt-1 mt-0.5">
         <span className="font-semibold">{totalLabel}</span>
-        <strong className="text-[#1e3a5f]">{money(total)}</strong>
+        <strong className="text-[#002B49]">{money(total)}</strong>
       </div>
     </div>
   );

@@ -117,7 +117,7 @@ export default function BasicInfoSection({ onExtractContacts }: Props) {
                 {app.contacts.length > 1 && (
                   <button
                     onClick={() => removeContact(i)}
-                    className="text-gray-400 hover:text-red-500 px-2 text-lg"
+                    className="text-[var(--muted)] hover:text-red-500 px-2 text-lg"
                   >✕</button>
                 )}
               </div>

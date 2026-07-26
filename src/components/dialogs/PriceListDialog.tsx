@@ -40,17 +40,17 @@ export default function PriceListDialog({ open, onClose }: Props) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-5xl overflow-hidden">
-        <div className="bg-[#1e3a5f] text-white px-5 py-3.5 flex justify-between items-center">
+      <div className="relative bg-white rounded-md shadow-xl w-full max-w-5xl overflow-hidden">
+        <div className="bg-[#002B49] text-white px-5 py-3.5 flex justify-between items-center">
           <span className="font-semibold">{T('dlgPrices')}</span>
           <button onClick={onClose} className="text-white/80 hover:text-white text-xl">✕</button>
         </div>
         <div className="p-5 max-h-[65vh] overflow-y-auto">
-          <p className="text-xs text-gray-500 mb-3">{T('pricesHint')}</p>
+          <p className="text-xs text-[var(--muted)] mb-3">{T('pricesHint')}</p>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-200 text-gray-400 text-left">
+                <tr className="border-b border-[var(--hairline)] text-[var(--muted)] text-left">
                   <th className="py-2 px-2 font-medium w-[22%]">{T('thProdName')}</th>
                   <th className="py-2 px-2 font-medium w-[8%]">{T('thUnit')}</th>
                   <th className="py-2 px-2 font-medium w-[10%]">{T('thPrice2')}</th>
@@ -61,7 +61,7 @@ export default function PriceListDialog({ open, onClose }: Props) {
               </thead>
               <tbody>
                 {localList.map((p, i) => (
-                  <tr key={i} className="border-b border-gray-100">
+                  <tr key={i} className="border-b border-[var(--hairline)]">
                     <td className="py-1 px-2">
                       <input type="text" className="field-input text-sm" value={p.name}
                         onChange={e => update(i, { name: e.target.value })} />
@@ -85,7 +85,7 @@ export default function PriceListDialog({ open, onClose }: Props) {
                         onChange={e => update(i, { kw: e.target.value })} />
                     </td>
                     <td className="py-1 px-2">
-                      <button onClick={() => remove(i)} className="text-gray-300 hover:text-red-500 text-lg px-1">✕</button>
+                      <button onClick={() => remove(i)} className="text-[var(--faint)] hover:text-red-500 text-lg px-1">✕</button>
                     </td>
                   </tr>
                 ))}
@@ -93,11 +93,11 @@ export default function PriceListDialog({ open, onClose }: Props) {
             </table>
           </div>
           <button onClick={add}
-            className="w-full border border-dashed border-gray-300 rounded-md py-1.5 text-sm text-gray-500 hover:bg-gray-50 mt-2">
+            className="w-full border border-dashed border-[var(--hairline-strong)] rounded-md py-1.5 text-sm text-[var(--muted)] hover:bg-[#FAF9F6] mt-2">
             {T('btnAddProd')}
           </button>
         </div>
-        <div className="px-5 py-3.5 border-t border-gray-100 flex justify-between">
+        <div className="px-5 py-3.5 border-t border-[var(--hairline)] flex justify-between">
           <button onClick={restore} className="btn-ghost text-sm">{T('btnRestorePrices')}</button>
           <div className="flex gap-2">
             <button onClick={onClose} className="btn-ghost text-sm">{T('btnCancel')}</button>

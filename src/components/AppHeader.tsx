@@ -16,25 +16,37 @@ export default function AppHeader({ onSummary, onEmail, onPrices }: Props) {
   const T = (k: Parameters<typeof t>[0]) => t(k, uiLang);
 
   return (
-    <header className="bg-[#1e3a5f] text-white px-6 py-4 flex flex-wrap justify-between items-center gap-3">
-      <div>
-        <h1 className="text-lg font-semibold">{T('appTitle')}</h1>
-        <p className="text-xs opacity-75 mt-0.5">{T('appSub')} · v1.0</p>
-      </div>
-      <div className="flex flex-wrap items-center gap-2">
-        <select
-          value={uiLang}
-          onChange={e => setUiLang(e.target.value as LangCode)}
-          className="bg-white/10 text-white text-sm rounded px-2 py-1 border border-white/20"
-        >
-          {LANGS.map(l => <option key={l} value={l} className="text-gray-900">{LANG_LABELS[l]}</option>)}
-        </select>
-        <HeaderBtn onClick={onSummary}>{T('btnSummary')}</HeaderBtn>
-        <HeaderBtn onClick={onEmail}>{T('btnFollowupEmail')}</HeaderBtn>
-        <HeaderBtn onClick={onPrices}>{T('btnPrices')}</HeaderBtn>
-        {statusMsg && (
-          <span className="text-xs text-yellow-300 font-medium">{statusMsg}</span>
-        )}
+    <header className="sticky top-0 z-30 border-b border-[var(--hairline)] bg-[var(--ground)]/85 backdrop-blur-sm">
+      <div className="max-w-4xl mx-auto px-6 h-16 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <span className="text-[13px] font-semibold tracking-[0.18em] uppercase text-[#002B49] whitespace-nowrap">
+            Chambers
+          </span>
+          <span className="w-px h-4 bg-[var(--hairline-strong)]" />
+          <span className="text-[12.5px] text-[var(--muted)] truncate">
+            {T('appTitle')}
+          </span>
+        </div>
+
+        <div className="flex items-center gap-1">
+          {statusMsg && (
+            <span className="hidden md:inline text-[11px] text-[var(--accent)] mr-2 whitespace-nowrap">
+              {statusMsg}
+            </span>
+          )}
+          <select
+            value={uiLang}
+            onChange={e => setUiLang(e.target.value as LangCode)}
+            aria-label={T('uiLangTitle')}
+            className="text-[12px] text-[#002B49] bg-transparent rounded px-1.5 py-1 border border-transparent hover:border-[var(--hairline-strong)] outline-none cursor-pointer transition-colors"
+          >
+            {LANGS.map(l => <option key={l} value={l}>{LANG_LABELS[l]}</option>)}
+          </select>
+          <span className="w-px h-4 bg-[var(--hairline-strong)] mx-1.5" />
+          <HeaderBtn onClick={onSummary}>{T('btnSummary')}</HeaderBtn>
+          <HeaderBtn onClick={onEmail}>{T('btnFollowupEmail')}</HeaderBtn>
+          <HeaderBtn onClick={onPrices}>{T('btnPrices')}</HeaderBtn>
+        </div>
       </div>
     </header>
   );
@@ -44,7 +56,7 @@ function HeaderBtn({ children, onClick }: { children: React.ReactNode; onClick: 
   return (
     <button
       onClick={onClick}
-      className="bg-white/10 hover:bg-white/20 text-white text-sm px-3 py-1.5 rounded transition-colors"
+      className="text-[12.5px] text-[#002B49] px-2.5 py-1.5 rounded hover:bg-[var(--beige)] transition-colors whitespace-nowrap"
     >
       {children}
     </button>

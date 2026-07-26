@@ -26,13 +26,13 @@ export default function AiSettingsDialog({ open, onClose }: Props) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden">
-        <div className="bg-[#1e3a5f] text-white px-5 py-3.5 flex justify-between items-center">
+      <div className="relative bg-white rounded-md shadow-xl w-full max-w-2xl overflow-hidden">
+        <div className="bg-[#002B49] text-white px-5 py-3.5 flex justify-between items-center">
           <span className="font-semibold">{T('dlgAiCfg')}</span>
           <button onClick={onClose} className="text-white/80 hover:text-white text-xl">✕</button>
         </div>
         <div className="p-5 max-h-[70vh] overflow-y-auto">
-          <p className="text-xs text-gray-500 mb-4">{T('aiCfgHint')}</p>
+          <p className="text-xs text-[var(--muted)] mb-4">{T('aiCfgHint')}</p>
 
           <div className="flex flex-col gap-3">
             <div>
@@ -83,7 +83,7 @@ export default function AiSettingsDialog({ open, onClose }: Props) {
             )}
           </div>
         </div>
-        <div className="px-5 py-3.5 border-t border-gray-100 flex justify-between">
+        <div className="px-5 py-3.5 border-t border-[var(--hairline)] flex justify-between">
           <button onClick={clear} className="btn-ghost text-sm text-red-600">{T('btnClear')}</button>
           <div className="flex gap-2">
             <button onClick={onClose} className="btn-ghost text-sm">{T('btnCancel')}</button>
