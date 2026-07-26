@@ -189,29 +189,33 @@ export async function buildTemplatePptx(app: AppState, priceList: PriceItem[]): 
             const cardW = 5.75, gap = 0.5, cardY = 1.62, cardH = 4.78;
             const x1 = 0.69, x2 = x1 + cardW + gap;
 
-            // Draw line items as positioned text (no tables → no PowerPoint
-            // default-style gridlines). Guide sub-header + product rows.
-            const priceW = 1.6;
-            const guideLabel = (gx: number, gy: number, gw: number, text: string) => {
-              p.addText(text.toUpperCase(), { x: gx, y: gy, w: gw, h: 0.26, fontSize: 8.5, bold: true, color: BRONZE, charSpacing: 2, fontFace: FONT, valign: 'middle', align: 'left' });
-              p.addShape('rect', { x: gx, y: gy + 0.27, w: gw, h: 0.011, fill: { color: BRONZE }, line: { width: 0 } });
-            };
-            const drawItems = (x: number, price: (r: QuoteRow) => number) => {
-              let cy = cardY + 0.92;
-              const rowH = 0.34;
+            // Grouped line-item rows (guide sub-header + products) for a card
+            const buildRows = (price: (r: QuoteRow) => number) => {
+              const out: any[][] = [];
               for (const g of groups) {
-                if (g.guide) { guideLabel(x + 0.3, cy, cardW - 0.6, g.guide); cy += 0.42; }
+                if (g.guide) {
+                  out.push([{
+                    text: g.guide.toUpperCase(),
+                    options: {
+                      colspan: 2, color: BRONZE, bold: true, fontSize: 8.5, charSpacing: 2,
+                      align: 'left', valign: 'middle', fontFace: FONT, fill: { color: CARD_BG },
+                      border: [{ type: 'none' }, { type: 'none' }, { type: 'solid', color: BRONZE, pt: 0.5 }, { type: 'none' }],
+                    },
+                  }]);
+                }
                 for (const r of g.rows) {
-                  p.addText(cleanName(r), { x: x + 0.3, y: cy, w: cardW - 0.6 - priceW, h: rowH, fontSize: 10.5, color: NAVY, fontFace: FONT, valign: 'middle', align: 'left' });
-                  p.addText(money(price(r)), { x: x + cardW - 0.3 - priceW, y: cy, w: priceW, h: rowH, fontSize: 10.5, bold: true, color: NAVY, fontFace: FONT, valign: 'middle', align: 'right' });
-                  cy += rowH;
+                  out.push([
+                    { text: cleanName(r), options: { color: NAVY, fontFace: FONT, align: 'left', fontSize: 10.5, valign: 'middle' } },
+                    { text: money(price(r)), options: { color: NAVY, fontFace: FONT, align: 'right', fontSize: 10.5, bold: true, valign: 'middle' } },
+                  ]);
                 }
               }
+              return out;
             };
 
             const drawCard = (x: number, o: {
               optLabel: string; termLabel: string; headFill: string; border: string; borderW: number;
-              recommended?: boolean; price: (r: QuoteRow) => number; footer: () => void;
+              recommended?: boolean; itemRows: any[][]; footer: () => void;
             }) => {
               p.addShape('roundRect', { x, y: cardY, w: cardW, h: cardH, rectRadius: 0.08, fill: { color: CARD_BG }, line: { color: o.border, width: o.borderW } });
               p.addShape('roundRect', { x, y: cardY, w: cardW, h: 0.68, rectRadius: 0.08, fill: { color: o.headFill }, line: { width: 0 } });
@@ -226,14 +230,17 @@ export async function buildTemplatePptx(app: AppState, priceList: PriceItem[]): 
               if (o.recommended) {
                 p.addText('★ RECOMMENDED', { x: x + cardW - 2.0, y: cardY + 0.19, w: 1.72, h: 0.3, fontSize: 8, bold: true, color: NAVY, fill: { color: GOLD }, align: 'center', valign: 'middle', fontFace: FONT });
               }
-              drawItems(x, o.price);
+              p.addTable(o.itemRows, {
+                x: x + 0.3, y: cardY + 0.9, w: cardW - 0.6, colW: [cardW - 0.6 - 1.55, 1.55],
+                rowH: 0.32, valign: 'middle', border: { type: 'solid', color: 'EEEBE3', pt: 0.5 },
+              });
               o.footer();
             };
 
             // Card 1 — 1-Year (restrained, secondary)
             drawCard(x1, {
               optLabel: 'OPTION 1', termLabel: '1-Year Contract', headFill: '7A8794', border: BORDER, borderW: 1,
-              price: rowOneNet,
+              itemRows: buildRows(rowOneNet),
               footer: () => {
                 const fy = cardY + cardH - 1.02;
                 p.addShape('rect', { x: x1 + 0.3, y: fy, w: cardW - 0.6, h: 0.012, fill: { color: BORDER }, line: { width: 0 } });
@@ -246,7 +253,7 @@ export async function buildTemplatePptx(app: AppState, priceList: PriceItem[]): 
             // Card 2 — 2-Year (recommended, emphasised)
             drawCard(x2, {
               optLabel: 'OPTION 2', termLabel: '2-Year Contract', headFill: NAVY, border: BRONZE, borderW: 2.25, recommended: true,
-              price: rowY1in2Net,
+              itemRows: buildRows(rowY1in2Net),
               footer: () => {
                 const fy = cardY + cardH - 1.5;
                 p.addShape('rect', { x: x2 + 0.3, y: fy, w: cardW - 0.6, h: 0.012, fill: { color: BRONZE }, line: { width: 0 } });
@@ -274,60 +281,53 @@ export async function buildTemplatePptx(app: AppState, priceList: PriceItem[]): 
             return;
           }
 
-          // ── Single-term (1y or 2y): drawn as positioned text + hairlines
-          // (no table → no PowerPoint default-style gridlines), grouped by guide.
-          const TX = 0.55, TW = 12.2, INSET = 0.22;
-          const cols = term === '1y'
-            ? [{ x: TX, w: 8.7, align: 'left' }, { x: TX + 8.7, w: 1.3, align: 'center' }, { x: TX + 10.0, w: 2.2, align: 'right' }]
-            : [{ x: TX, w: 7.2, align: 'left' }, { x: TX + 7.2, w: 2.5, align: 'right' }, { x: TX + 9.7, w: 2.5, align: 'right' }];
-          const headLabels = term === '1y' ? ['Product', 'Qty', 'Price'] : ['Product', String(y1), String(y2)];
-          const valCells = (r: QuoteRow): string[] => term === '1y'
-            ? [cleanName(r), r.flat ? '—' : String(r.qty), money(rowOneNet(r))]
-            : [cleanName(r), money(rowY1in2Net(r)), money(rowY2Net(r))];
-          const totalCells = term === '1y'
-            ? ['Total', '', money(result.total)]
-            : ['Total', money(gdVat(sumRows(rowY1in2Net))), money(result.total2)];
+          // ── Single-term table (1y or 2y), grouped by guide, vertically balanced
+          const th = (t: string, align: any = 'left') => ({
+            text: t, options: { bold: true, color: 'FFFFFF', fill: { color: NAVY }, align, fontFace: FONT, valign: 'middle' },
+          });
+          const td = (t: string, align: any = 'left', bold = false) => ({
+            text: t, options: { color: NAVY, align, bold, fontFace: FONT, valign: 'middle' },
+          });
+          const ncols = 3;
+          const guideRow = (g: string) => [{
+            text: g.toUpperCase(),
+            options: {
+              colspan: ncols, color: BRONZE, bold: true, fontSize: 9.5, charSpacing: 2,
+              align: 'left', valign: 'middle', fontFace: FONT, fill: { color: GHEAD },
+              border: [{ type: 'none' }, { type: 'none' }, { type: 'solid', color: BRONZE, pt: 0.5 }, { type: 'none' }],
+            },
+          }];
 
-          const cell = (c: { x: number; w: number; align: string }, text: string, y: number, h: number, o: { bold?: boolean; color?: string; fs?: number } = {}) => {
-            const left = c.align === 'left';
-            p.addText(text, {
-              x: left ? c.x + INSET : c.x, y, w: c.w - INSET, h,
-              fontSize: o.fs ?? 12.5, bold: !!o.bold, color: o.color ?? NAVY,
-              align: c.align, valign: 'middle', fontFace: FONT,
-            });
-          };
-
-          const headH = 0.5, rowH = 0.44, guideH = 0.42, totalH = 0.52;
-          const nGuides = groups.filter((g) => g.guide).length;
-          const blockH = headH + nGuides * guideH + rows.length * rowH + totalH;
-          let cy = Math.max(1.55, 1.62 + (4.85 - blockH) / 2);
-
-          // Header band
-          p.addShape('rect', { x: TX, y: cy, w: TW, h: headH, fill: { color: NAVY }, line: { width: 0 } });
-          headLabels.forEach((t, i) => cell(cols[i], t, cy, headH, { bold: true, color: 'FFFFFF' }));
-          cy += headH;
-
-          for (const g of groups) {
-            if (g.guide) {
-              p.addShape('rect', { x: TX, y: cy, w: TW, h: guideH, fill: { color: GHEAD }, line: { width: 0 } });
-              p.addText(g.guide.toUpperCase(), { x: TX + INSET, y: cy, w: TW - INSET * 2, h: guideH, fontSize: 9.5, bold: true, color: BRONZE, charSpacing: 2, fontFace: FONT, valign: 'middle', align: 'left' });
-              p.addShape('rect', { x: TX, y: cy + guideH - 0.011, w: TW, h: 0.011, fill: { color: BRONZE }, line: { width: 0 } });
-              cy += guideH;
+          let head: any[]; const body: any[][] = []; let colW: number[];
+          if (term === '1y') {
+            head = [th('Product'), th('Qty', 'center'), th('Price', 'right')];
+            for (const g of groups) {
+              if (g.guide) body.push(guideRow(g.guide));
+              for (const r of g.rows) body.push([td(cleanName(r)), td(r.flat ? '—' : String(r.qty), 'center'), td(money(rowOneNet(r)), 'right')]);
             }
-            for (const r of g.rows) {
-              valCells(r).forEach((t, i) => cell(cols[i], t, cy, rowH));
-              p.addShape('rect', { x: TX, y: cy + rowH - 0.008, w: TW, h: 0.008, fill: { color: BORDER }, line: { width: 0 } });
-              cy += rowH;
+            body.push([td('Total', 'left', true), td('', 'center'), td(money(result.total), 'right', true)]);
+            colW = [8.7, 1.3, 2.2];
+          } else {
+            head = [th('Product'), th(String(y1), 'right'), th(String(y2), 'right')];
+            for (const g of groups) {
+              if (g.guide) body.push(guideRow(g.guide));
+              for (const r of g.rows) body.push([td(cleanName(r)), td(money(rowY1in2Net(r)), 'right'), td(money(rowY2Net(r)), 'right')]);
             }
+            body.push([td('Total', 'left', true), td(money(gdVat(sumRows(rowY1in2Net))), 'right', true), td(money(result.total2), 'right', true)]);
+            colW = [7.2, 2.5, 2.5];
           }
-          // Total row
-          p.addShape('rect', { x: TX, y: cy, w: TW, h: 0.016, fill: { color: NAVY }, line: { width: 0 } });
-          totalCells.forEach((t, i) => cell(cols[i], t, cy, totalH, { bold: true }));
-          cy += totalH;
+
+          const rowH = 0.44;
+          const tableH = (body.length + 1) * rowH;
+          const startY = Math.max(1.55, 1.6 + (4.85 - tableH) / 2);
+          p.addTable([head, ...body], {
+            x: 0.55, y: startY, w: 12.2, colW, fontSize: 12.5, valign: 'middle',
+            border: { type: 'solid', color: BORDER, pt: 0.75 }, rowH, autoPage: false,
+          });
 
           if (quote.note.trim()) {
             p.addText(quote.note, {
-              x: TX, y: Math.min(6.7, cy + 0.18), w: TW, h: 0.35, fontSize: 10, italic: true, color: GRAY, fontFace: FONT,
+              x: 0.55, y: Math.min(6.55, startY + tableH + 0.2), w: 12.2, h: 0.35, fontSize: 10, italic: true, color: GRAY, fontFace: FONT,
             });
           }
         }, 'quoteCards');
