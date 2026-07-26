@@ -189,15 +189,22 @@ export async function buildTemplatePptx(app: AppState, priceList: PriceItem[]): 
             const cardW = 5.75, gap = 0.5, cardY = 1.62, cardH = 4.78;
             const x1 = 0.69, x2 = x1 + cardW + gap;
 
-            // Grouped line-item rows (guide sub-header + products) for a card
-            const buildRows = (price: (r: QuoteRow) => number) => {
+            // Grouped line-item rows for a card. `cols` = one entry per price
+            // column (a year label + its price accessor). A year-header row is
+            // emitted on top so each column's year is clear.
+            const buildRows = (cols: Array<{ label: string; price: (r: QuoteRow) => number }>) => {
+              const nCol = cols.length + 1;
               const out: any[][] = [];
+              out.push([
+                { text: '', options: { fontFace: FONT, fontSize: 8 } },
+                ...cols.map((c) => ({ text: c.label, options: { color: MUTED, bold: true, align: 'right', fontSize: 8.5, charSpacing: 1, fontFace: FONT, valign: 'bottom' } })),
+              ]);
               for (const g of groups) {
                 if (g.guide) {
                   out.push([{
                     text: g.guide.toUpperCase(),
                     options: {
-                      colspan: 2, color: BRONZE, bold: true, fontSize: 8.5, charSpacing: 2,
+                      colspan: nCol, color: BRONZE, bold: true, fontSize: 8.5, charSpacing: 2,
                       align: 'left', valign: 'middle', fontFace: FONT, fill: { color: CARD_BG },
                       border: [{ type: 'none' }, { type: 'none' }, { type: 'solid', color: BRONZE, pt: 0.5 }, { type: 'none' }],
                     },
@@ -205,8 +212,8 @@ export async function buildTemplatePptx(app: AppState, priceList: PriceItem[]): 
                 }
                 for (const r of g.rows) {
                   out.push([
-                    { text: cleanName(r), options: { color: NAVY, fontFace: FONT, align: 'left', fontSize: 10.5, valign: 'middle' } },
-                    { text: money(price(r)), options: { color: NAVY, fontFace: FONT, align: 'right', fontSize: 10.5, bold: true, valign: 'middle' } },
+                    { text: cleanName(r), options: { color: NAVY, fontFace: FONT, align: 'left', fontSize: 10, valign: 'middle' } },
+                    ...cols.map((c) => ({ text: money(c.price(r)), options: { color: NAVY, fontFace: FONT, align: 'right', fontSize: 10, bold: true, valign: 'middle' } })),
                   ]);
                 }
               }
@@ -215,7 +222,7 @@ export async function buildTemplatePptx(app: AppState, priceList: PriceItem[]): 
 
             const drawCard = (x: number, o: {
               optLabel: string; termLabel: string; headFill: string; border: string; borderW: number;
-              recommended?: boolean; itemRows: any[][]; footer: () => void;
+              recommended?: boolean; itemRows: any[][]; colW: number[]; footer: () => void;
             }) => {
               p.addShape('roundRect', { x, y: cardY, w: cardW, h: cardH, rectRadius: 0.08, fill: { color: CARD_BG }, line: { color: o.border, width: o.borderW } });
               p.addShape('rect', { x, y: cardY, w: cardW, h: 0.68, fill: { color: o.headFill }, line: { width: 0 } });
@@ -230,8 +237,8 @@ export async function buildTemplatePptx(app: AppState, priceList: PriceItem[]): 
                 p.addText('★ RECOMMENDED', { x: x + cardW - 2.0, y: cardY + 0.19, w: 1.72, h: 0.3, fontSize: 8, bold: true, color: NAVY, fill: { color: GOLD }, align: 'center', valign: 'middle', fontFace: FONT });
               }
               p.addTable(o.itemRows, {
-                x: x + 0.3, y: cardY + 0.9, w: cardW - 0.6, colW: [cardW - 0.6 - 1.55, 1.55],
-                rowH: 0.32, valign: 'middle', border: { type: 'solid', color: 'EEEBE3', pt: 0.5 },
+                x: x + 0.3, y: cardY + 0.9, w: cardW - 0.6, colW: o.colW,
+                rowH: 0.3, valign: 'middle', border: { type: 'solid', color: 'EEEBE3', pt: 0.5 },
               });
               o.footer();
             };
@@ -239,7 +246,8 @@ export async function buildTemplatePptx(app: AppState, priceList: PriceItem[]): 
             // Card 1 — 1-Year (restrained, secondary)
             drawCard(x1, {
               optLabel: 'OPTION 1', termLabel: '1-Year Contract', headFill: '7A8794', border: BORDER, borderW: 1,
-              itemRows: buildRows(rowOneNet),
+              itemRows: buildRows([{ label: String(y1), price: rowOneNet }]),
+              colW: [cardW - 0.6 - 1.6, 1.6],
               footer: () => {
                 const fy = cardY + cardH - 1.02;
                 p.addShape('rect', { x: x1 + 0.3, y: fy, w: cardW - 0.6, h: 0.012, fill: { color: BORDER }, line: { width: 0 } });
@@ -249,18 +257,20 @@ export async function buildTemplatePptx(app: AppState, priceList: PriceItem[]): 
               },
             });
 
-            // Card 2 — 2-Year (recommended, emphasised)
+            // Card 2 — 2-Year (recommended, emphasised). Per-product Year 1 / Year 2
+            // pricing is shown in the two columns; footer carries the totals.
             drawCard(x2, {
               optLabel: 'OPTION 2', termLabel: '2-Year Contract', headFill: NAVY, border: BRONZE, borderW: 2.25, recommended: true,
-              itemRows: buildRows(rowY1in2Net),
+              itemRows: buildRows([{ label: String(y1), price: rowY1in2Net }, { label: String(y2), price: rowY2Net }]),
+              colW: [cardW - 0.6 - 2.7, 1.35, 1.35],
               footer: () => {
                 const fy = cardY + cardH - 1.5;
                 p.addShape('rect', { x: x2 + 0.3, y: fy, w: cardW - 0.6, h: 0.012, fill: { color: BRONZE }, line: { width: 0 } });
                 p.addText(
                   [
-                    { text: `Year 1 (${y1})  `, options: { fontSize: 10, color: MUTED } },
+                    { text: `Year 1 total  `, options: { fontSize: 10, color: MUTED } },
                     { text: `${money(two1)}`, options: { fontSize: 10, bold: true, color: NAVY } },
-                    { text: `      Year 2 (${y2})  `, options: { fontSize: 10, color: MUTED } },
+                    { text: `       Year 2 total  `, options: { fontSize: 10, color: MUTED } },
                     { text: `${money(two2)}`, options: { fontSize: 10, bold: true, color: NAVY } },
                   ],
                   { x: x2 + 0.3, y: fy + 0.1, w: cardW - 0.6, h: 0.3, fontFace: FONT, valign: 'middle' },
