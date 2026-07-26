@@ -143,6 +143,17 @@ export default function CalcSection() {
     return standaloneRows.find(r => r.id === 'plat') ?? null;
   })();
 
+  // Whether the current scenario is a bundle actually DEFINED for this firm's
+  // region in the rate card RULES. null = region has no bundle rules (unknown).
+  const bundleDefinedForRegion: boolean | null = (() => {
+    if (!en || !_rc?.bundleRules || scenK === 0) return null;
+    const guide = en[0];
+    const regionRules = _rc.bundleRules.filter(b => b.region === guide);
+    if (regionRules.length === 0) return null; // guide not one of the bundled regions
+    const name = SCEN_LABELS[scenK];
+    return regionRules.some(b => b.bundle === name);
+  })();
+
   // For "no saving" combos, find the best adjacent bundle that DOES save
   const bestUpgradeHint: { label: string; saving: number } | null = (() => {
     if (!en || !_rc || !isRenewal || scenK === 0 || !standaloneRow) return null;
@@ -289,6 +300,9 @@ export default function CalcSection() {
     const currentPitch = resolvePrice(r);
     const standalonePitch = standaloneRow.pitch;
     const saving = standalonePitch - currentPitch;
+    const region = en?.[0] ?? '';
+
+    // Real, priced-in bundle discount
     if (saving > 0) {
       return (
         <div className="mt-1 text-xs text-emerald-600 font-medium">
@@ -296,10 +310,25 @@ export default function CalcSection() {
         </div>
       );
     }
+
+    // Region explicitly does NOT define this bundle (e.g. Platform & MP in Greater China)
+    if (bundleDefinedForRegion === false) {
+      return (
+        <div className="mt-1 text-xs text-amber-600 font-medium">
+          {region} has no “{SCEN_LABELS[scenK]}” bundle — priced as standalone
+          {bestUpgradeHint && (
+            <>
+              {' '}· add <span className="font-semibold">{bestUpgradeHint.label}</span> to save {fmt(bestUpgradeHint.saving)}
+            </>
+          )}
+        </div>
+      );
+    }
+
     // Recognised bundle scenario but no Platform price reduction for this firm
     return (
       <div className="mt-1 text-xs text-sky-700 font-medium">
-        {SCEN_LABELS[scenK]} bundle
+        {SCEN_LABELS[scenK]} bundle · no Platform uplift discount
         {bestUpgradeHint && (
           <span className="text-amber-600">
             {' '}· add <span className="font-semibold">{bestUpgradeHint.label}</span> to save {fmt(bestUpgradeHint.saving)}
