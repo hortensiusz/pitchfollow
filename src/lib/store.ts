@@ -2,7 +2,22 @@
 import { create } from 'zustand';
 import type { AppState, PriceItem, AiConfig, LangCode, CurrencyCode, BulletItem, QuoteRow, SectionState, QuoteState } from './types';
 import { DEFAULT_PRICES } from './defaultPrices';
-import { SECTION_DEFS } from './i18n';
+import { SECTION_DEFS, QUOTE_TITLES, sectionLabel, ALL_LANGS } from './i18n';
+
+/** Retitle default (non-customised) section & quote titles to the given language.
+ *  A title counts as "default" if it matches that section's label in ANY language. */
+function syncTitles(app: AppState, lang: LangCode): AppState {
+  const secs = { ...app.secs };
+  for (const def of SECTION_DEFS) {
+    const sec = secs[def.id];
+    if (!sec) continue;
+    const isDefault = !sec.title || ALL_LANGS.some((l) => sec.title === sectionLabel(def, l));
+    if (isDefault) secs[def.id] = { ...sec, title: sectionLabel(def, lang) };
+  }
+  const qIsDefault = !app.quote.title || ALL_LANGS.some((l) => app.quote.title === QUOTE_TITLES[l]);
+  const quote = qIsDefault ? { ...app.quote, title: QUOTE_TITLES[lang] } : app.quote;
+  return { ...app, secs, quote };
+}
 
 const LS_STATE = 'sfp_state_v2';
 const LS_PRICE = 'sfp_prices_v2';
@@ -152,8 +167,11 @@ export const useStore = create<Store>((set, get) => ({
   },
 
   setUiLang: (lang) => {
-    set(s => ({ uiLang: lang, app: { ...s.app, lang } }));
-    try { localStorage.setItem(LS_UI_LANG, lang); } catch {}
+    set(s => ({ uiLang: lang, app: syncTitles({ ...s.app, lang }, lang) }));
+    try {
+      localStorage.setItem(LS_UI_LANG, lang);
+      localStorage.setItem(LS_STATE, JSON.stringify(get().app));
+    } catch {}
   },
 
   setStatus: (msg, ms = 2500) => {
@@ -195,7 +213,10 @@ export const useStore = create<Store>((set, get) => ({
 
     try {
       const lang = localStorage.getItem(LS_UI_LANG) as LangCode;
-      if (lang) set({ uiLang: lang });
+      if (lang) {
+        // Unify: interface + content language, and retitle defaults to match
+        set(s => ({ uiLang: lang, app: syncTitles({ ...s.app, lang }, lang) }));
+      }
     } catch {}
   },
 

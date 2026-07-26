@@ -171,6 +171,8 @@ export const I18N: I18nMap = {
 
 const LANG_IDX: Record<LangCode, number> = { en: 0, zh: 1, zhTW: 2, fr: 3, de: 4, ptBR: 5 };
 
+export const ALL_LANGS: LangCode[] = ['en', 'zh', 'zhTW', 'fr', 'de', 'ptBR'];
+
 export function t(key: I18nKey, lang: LangCode): string {
   const arr = I18N[key];
   if (!arr) return key;
@@ -179,4 +181,44 @@ export function t(key: I18nKey, lang: LangCode): string {
 
 export function sectionLabel(def: SectionDef, lang: LangCode): string {
   return def[lang] ?? def.en;
+}
+
+// ── Static labels baked into the exported PPT (translated by content language) ──
+export type PptKey =
+  | 'coverSubtitle' | 'presentationTo' | 'preparedBy' | 'dateLabel'
+  | 'optionWord' | 'oneYearContract' | 'twoYearContract' | 'recommended'
+  | 'annualTotal' | 'renewsNote' | 'totalWord' | 'twoYearTotal'
+  | 'savingNote' | 'caption' | 'captionNoSave'
+  | 'thProduct' | 'thQty' | 'thPrice' | 'thTotal'
+  | 'backTitle' | 'backVisit' | 'contactWord';
+
+const PPT_I18N: Record<PptKey, [string, string, string, string, string, string]> = {
+  coverSubtitle:   ['Follow-Up Meeting', '跟进会议', '跟進會議', 'Réunion de suivi', 'Nachfasstermin', 'Reunião de acompanhamento'],
+  presentationTo:  ['A presentation to:', '呈送对象：', '呈送對象：', 'Présentation destinée à :', 'Präsentation für:', 'Apresentação para:'],
+  preparedBy:      ['Prepared by:', '制作人：', '製作人：', 'Préparé par :', 'Erstellt von:', 'Preparado por:'],
+  dateLabel:       ['Date:', '日期：', '日期：', 'Date :', 'Datum:', 'Data:'],
+  optionWord:      ['OPTION', '方案', '方案', 'OPTION', 'OPTION', 'OPÇÃO'],
+  oneYearContract: ['1-Year Contract', '一年合约', '一年合約', 'Contrat 1 an', '1-Jahres-Vertrag', 'Contrato de 1 ano'],
+  twoYearContract: ['2-Year Contract', '两年合约', '兩年合約', 'Contrat 2 ans', '2-Jahres-Vertrag', 'Contrato de 2 anos'],
+  recommended:     ['★ RECOMMENDED', '★ 推荐', '★ 推薦', '★ RECOMMANDÉ', '★ EMPFOHLEN', '★ RECOMENDADO'],
+  annualTotal:     ['Annual total', '年度总计', '年度總計', 'Total annuel', 'Jahresgesamt', 'Total anual'],
+  renewsNote:      ['Renews at full price with annual uplift', '按全价续订，逐年上调', '按全價續訂，逐年上調', 'Renouvellement au prix plein avec hausse annuelle', 'Verlängerung zum vollen Preis mit jährlicher Erhöhung', 'Renova pelo preço integral com reajuste anual'],
+  totalWord:       ['total', '总计', '總計', 'total', 'gesamt', 'total'],
+  twoYearTotal:    ['2-year total', '两年总计', '兩年總計', 'Total sur 2 ans', '2-Jahres-Gesamt', 'Total de 2 anos'],
+  savingNote:      ['Save {amt} in year one · rate locked for 24 months', '首年节省 {amt}·费率锁定 24 个月', '首年節省 {amt}·費率鎖定 24 個月', 'Économisez {amt} la 1re année · tarif bloqué 24 mois', '{amt} Ersparnis im 1. Jahr · Preis 24 Monate fix', 'Economize {amt} no 1º ano · tarifa fixa por 24 meses'],
+  caption:         ['Commit to the 2-year contract to save {amt} in year one and lock your rate against annual uplifts.', '选择两年合约，首年即可节省 {amt}，并锁定费率、免受逐年上调影响。', '選擇兩年合約，首年即可節省 {amt}，並鎖定費率、免受逐年上調影響。', 'Optez pour le contrat de 2 ans afin d\'économiser {amt} la première année et de bloquer votre tarif contre les hausses annuelles.', 'Mit dem 2-Jahres-Vertrag sparen Sie {amt} im ersten Jahr und sichern Ihren Preis gegen jährliche Erhöhungen.', 'Opte pelo contrato de 2 anos para economizar {amt} no primeiro ano e travar sua tarifa contra reajustes anuais.'],
+  captionNoSave:   ['The 2-year contract locks your rate for 24 months, protecting against annual uplifts.', '两年合约锁定费率 24 个月，免受逐年上调影响。', '兩年合約鎖定費率 24 個月，免受逐年上調影響。', 'Le contrat de 2 ans bloque votre tarif pendant 24 mois, à l\'abri des hausses annuelles.', 'Der 2-Jahres-Vertrag sichert Ihren Preis für 24 Monate gegen jährliche Erhöhungen.', 'O contrato de 2 anos trava sua tarifa por 24 meses, protegendo contra reajustes anuais.'],
+  thProduct:       ['Product', '项目', '項目', 'Produit', 'Produkt', 'Produto'],
+  thQty:           ['Qty', '数量', '數量', 'Qté', 'Menge', 'Qtd.'],
+  thPrice:         ['Price', '价格', '價格', 'Prix', 'Preis', 'Preço'],
+  thTotal:         ['Total', '总计', '總計', 'Total', 'Gesamt', 'Total'],
+  backTitle:       ['For more information and FAQs', '了解更多信息与常见问题', '了解更多資訊與常見問題', 'Pour plus d\'informations et FAQ', 'Für weitere Informationen und FAQ', 'Para mais informações e perguntas frequentes'],
+  backVisit:       ['Please visit chambers.com/faqs', '请访问 chambers.com/faqs', '請造訪 chambers.com/faqs', 'Rendez-vous sur chambers.com/faqs', 'Besuchen Sie chambers.com/faqs', 'Acesse chambers.com/faqs'],
+  contactWord:     ['Contact:', '联系人：', '聯絡人：', 'Contact :', 'Kontakt:', 'Contato:'],
+};
+
+export function pptLabel(key: PptKey, lang: LangCode): string {
+  const arr = PPT_I18N[key];
+  if (!arr) return key;
+  return arr[LANG_IDX[lang]] ?? arr[0];
 }

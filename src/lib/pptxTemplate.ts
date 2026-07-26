@@ -5,7 +5,7 @@ import path from 'path';
 import os from 'os';
 import { Automizer, ModifyTextHelper, modify } from 'pptx-automizer';
 import type { AppState, PriceItem } from './types';
-import { SECTION_DEFS, QUOTE_TITLES, sectionLabel } from './i18n';
+import { SECTION_DEFS, QUOTE_TITLES, sectionLabel, pptLabel, type PptKey } from './i18n';
 import { calcQuote, formatMoney, rowOneNet, calcP1Default, calcP2Default } from './quoteCalc';
 
 const TEMPLATE = 'chambers-template-2026.pptx';
@@ -63,6 +63,7 @@ export async function buildTemplatePptx(app: AppState, priceList: PriceItem[]): 
   const pres = automizer.loadRoot(TEMPLATE).load(TEMPLATE, 'tpl');
 
   const lang = app.lang;
+  const L = (k: PptKey) => pptLabel(k, lang);
   const client = app.client || 'Client';
   const contacts = app.contacts.filter(Boolean);
   const cur = app.currency;
@@ -74,12 +75,12 @@ export async function buildTemplatePptx(app: AppState, priceList: PriceItem[]): 
   // ── Cover ────────────────────────────────────────────────────────────────
   pres.addSlide('tpl', SLIDE.cover, (slide: any) => {
     slide.modifyElement('Text Placeholder 2', [ModifyTextHelper.setText(client)]);
-    slide.modifyElement('Text Placeholder 3', [ModifyTextHelper.setText('Follow-Up Meeting')]);
+    slide.modifyElement('Text Placeholder 3', [ModifyTextHelper.setText(L('coverSubtitle'))]);
     // Replace the template's details placeholder (label / value pairs)
     const pairs: Array<[string, string]> = [];
-    if (contacts.length) pairs.push(['A presentation to:', contacts.join(', ')]);
-    if (app.owner) pairs.push(['Prepared by:', app.owner]);
-    if (app.mdate) pairs.push(['Date:', ukDate(app.mdate)]);
+    if (contacts.length) pairs.push([L('presentationTo'), contacts.join(', ')]);
+    if (app.owner) pairs.push([L('preparedBy'), app.owner]);
+    if (app.mdate) pairs.push([L('dateLabel'), ukDate(app.mdate)]);
     if (pairs.length) {
       slide.modifyElement('Text Placeholder 4', [
         modify.setMultiText(
@@ -234,7 +235,7 @@ export async function buildTemplatePptx(app: AppState, priceList: PriceItem[]): 
                 { x: x + 0.3, y: cardY + 0.0, w: cardW - 0.6, h: 0.68, fontFace: FONT, valign: 'middle', align: 'left' },
               );
               if (o.recommended) {
-                p.addText('★ RECOMMENDED', { x: x + cardW - 2.0, y: cardY + 0.19, w: 1.72, h: 0.3, fontSize: 8, bold: true, color: NAVY, fill: { color: GOLD }, align: 'center', valign: 'middle', fontFace: FONT });
+                p.addText(L('recommended'), { x: x + cardW - 2.0, y: cardY + 0.19, w: 1.72, h: 0.3, fontSize: 8, bold: true, color: NAVY, fill: { color: GOLD }, align: 'center', valign: 'middle', fontFace: FONT });
               }
               p.addTable(o.itemRows, {
                 x: x + 0.3, y: cardY + 0.9, w: cardW - 0.6, colW: o.colW,
@@ -245,22 +246,22 @@ export async function buildTemplatePptx(app: AppState, priceList: PriceItem[]): 
 
             // Card 1 — 1-Year (restrained, secondary)
             drawCard(x1, {
-              optLabel: 'OPTION 1', termLabel: '1-Year Contract', headFill: '7A8794', border: BORDER, borderW: 1,
+              optLabel: `${L('optionWord')} 1`, termLabel: L('oneYearContract'), headFill: '7A8794', border: BORDER, borderW: 1,
               itemRows: buildRows([{ label: String(y1), price: rowOneNet }]),
               colW: [cardW - 0.6 - 1.6, 1.6],
               footer: () => {
                 const fy = cardY + cardH - 1.02;
                 p.addShape('rect', { x: x1 + 0.3, y: fy, w: cardW - 0.6, h: 0.012, fill: { color: BORDER }, line: { width: 0 } });
-                p.addText('Annual total', { x: x1 + 0.3, y: fy + 0.12, w: 2.8, h: 0.4, fontSize: 11, color: MUTED, fontFace: FONT, valign: 'middle' });
+                p.addText(L('annualTotal'), { x: x1 + 0.3, y: fy + 0.12, w: 2.8, h: 0.4, fontSize: 11, color: MUTED, fontFace: FONT, valign: 'middle' });
                 p.addText(money(y1Total), { x: x1 + cardW - 3.0, y: fy + 0.12, w: 2.7, h: 0.4, fontSize: 17, bold: true, color: NAVY, align: 'right', fontFace: FONT, valign: 'middle' });
-                p.addText('Renews at full price with annual uplift', { x: x1 + 0.3, y: fy + 0.58, w: cardW - 0.6, h: 0.28, fontSize: 9, italic: true, color: GRAY, fontFace: FONT });
+                p.addText(L('renewsNote'), { x: x1 + 0.3, y: fy + 0.58, w: cardW - 0.6, h: 0.28, fontSize: 9, italic: true, color: GRAY, fontFace: FONT });
               },
             });
 
             // Card 2 — 2-Year (recommended, emphasised). Per-product Year 1 / Year 2
             // pricing is shown in the two columns; footer carries the totals.
             drawCard(x2, {
-              optLabel: 'OPTION 2', termLabel: '2-Year Contract', headFill: NAVY, border: BRONZE, borderW: 2.25, recommended: true,
+              optLabel: `${L('optionWord')} 2`, termLabel: L('twoYearContract'), headFill: NAVY, border: BRONZE, borderW: 2.25, recommended: true,
               itemRows: buildRows([{ label: String(y1), price: rowY1in2Net }, { label: String(y2), price: rowY2Net }]),
               colW: [cardW - 0.6 - 2.7, 1.35, 1.35],
               footer: () => {
@@ -268,24 +269,24 @@ export async function buildTemplatePptx(app: AppState, priceList: PriceItem[]): 
                 p.addShape('rect', { x: x2 + 0.3, y: fy, w: cardW - 0.6, h: 0.012, fill: { color: BRONZE }, line: { width: 0 } });
                 p.addText(
                   [
-                    { text: `Year 1 total  `, options: { fontSize: 10, color: MUTED } },
+                    { text: `${y1} ${L('totalWord')}  `, options: { fontSize: 10, color: MUTED } },
                     { text: `${money(two1)}`, options: { fontSize: 10, bold: true, color: NAVY } },
-                    { text: `       Year 2 total  `, options: { fontSize: 10, color: MUTED } },
+                    { text: `       ${y2} ${L('totalWord')}  `, options: { fontSize: 10, color: MUTED } },
                     { text: `${money(two2)}`, options: { fontSize: 10, bold: true, color: NAVY } },
                   ],
                   { x: x2 + 0.3, y: fy + 0.1, w: cardW - 0.6, h: 0.3, fontFace: FONT, valign: 'middle' },
                 );
-                p.addText('2-year total', { x: x2 + 0.3, y: fy + 0.44, w: 2.8, h: 0.4, fontSize: 11, color: MUTED, fontFace: FONT, valign: 'middle' });
+                p.addText(L('twoYearTotal'), { x: x2 + 0.3, y: fy + 0.44, w: 2.8, h: 0.4, fontSize: 11, color: MUTED, fontFace: FONT, valign: 'middle' });
                 p.addText(money(twoTotal), { x: x2 + cardW - 3.0, y: fy + 0.44, w: 2.7, h: 0.4, fontSize: 17, bold: true, color: NAVY, align: 'right', fontFace: FONT, valign: 'middle' });
                 if (y1Saving > 0) {
-                  p.addText(`Save ${money(y1Saving)} in year one · rate locked for 24 months`, { x: x2 + 0.3, y: fy + 0.92, w: cardW - 0.6, h: 0.3, fontSize: 9.5, bold: true, color: GREEN, fontFace: FONT, valign: 'middle' });
+                  p.addText(L('savingNote').replace('{amt}', money(y1Saving)), { x: x2 + 0.3, y: fy + 0.92, w: cardW - 0.6, h: 0.3, fontSize: 9.5, bold: true, color: GREEN, fontFace: FONT, valign: 'middle' });
                 }
               },
             });
 
             const caption = y1Saving > 0
-              ? `Commit to the 2-year contract to save ${money(y1Saving)} in year one and lock your rate against annual uplifts.`
-              : 'The 2-year contract locks your rate for 24 months, protecting against annual uplifts.';
+              ? L('caption').replace('{amt}', money(y1Saving))
+              : L('captionNoSave');
             p.addText(caption, { x: 0.69, y: cardY + cardH + 0.14, w: cardW * 2 + gap, h: 0.4, fontSize: 10.5, italic: true, color: MUTED, align: 'center', fontFace: FONT });
             return;
           }
@@ -309,20 +310,20 @@ export async function buildTemplatePptx(app: AppState, priceList: PriceItem[]): 
 
           let head: any[]; const body: any[][] = []; let colW: number[];
           if (term === '1y') {
-            head = [th('Product'), th('Qty', 'center'), th('Price', 'right')];
+            head = [th(L('thProduct')), th(L('thQty'), 'center'), th(L('thPrice'), 'right')];
             for (const g of groups) {
               if (g.guide) body.push(guideRow(g.guide));
               for (const r of g.rows) body.push([td(cleanName(r)), td(r.flat ? '—' : String(r.qty), 'center'), td(money(rowOneNet(r)), 'right')]);
             }
-            body.push([td('Total', 'left', true), td('', 'center'), td(money(result.total), 'right', true)]);
+            body.push([td(L('thTotal'), 'left', true), td('', 'center'), td(money(result.total), 'right', true)]);
             colW = [8.7, 1.3, 2.2];
           } else {
-            head = [th('Product'), th(String(y1), 'right'), th(String(y2), 'right')];
+            head = [th(L('thProduct')), th(String(y1), 'right'), th(String(y2), 'right')];
             for (const g of groups) {
               if (g.guide) body.push(guideRow(g.guide));
               for (const r of g.rows) body.push([td(cleanName(r)), td(money(rowY1in2Net(r)), 'right'), td(money(rowY2Net(r)), 'right')]);
             }
-            body.push([td('Total', 'left', true), td(money(gdVat(sumRows(rowY1in2Net))), 'right', true), td(money(result.total2), 'right', true)]);
+            body.push([td(L('thTotal'), 'left', true), td(money(gdVat(sumRows(rowY1in2Net))), 'right', true), td(money(result.total2), 'right', true)]);
             colW = [7.2, 2.5, 2.5];
           }
 
@@ -355,9 +356,9 @@ export async function buildTemplatePptx(app: AppState, priceList: PriceItem[]): 
   // ── Back cover ───────────────────────────────────────────────────────────
   pres.addSlide('tpl', SLIDE.back, (slide: any) => {
     const lines = [
-      'For more information and FAQs.',
-      'Please visit chambers.com/faqs',
-      app.owner ? `Contact: ${app.owner}` : 'Contact: enquiries@chambers.com',
+      L('backTitle'),
+      L('backVisit'),
+      app.owner ? `${L('contactWord')} ${app.owner}` : `${L('contactWord')} enquiries@chambers.com`,
     ];
     slide.modifyElement('Text Placeholder 2', [
       modify.setMultiText(

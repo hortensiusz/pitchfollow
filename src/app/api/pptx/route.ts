@@ -16,12 +16,16 @@ export async function POST(req: NextRequest) {
     const safe = (s: string) => s.replace(/[\\/:*?"<>|]/g, '');
     const client = app.client && app.client !== 'Client' ? safe(app.client) + '-' : '';
     const fname = `${client}Follow-up-${app.mdate || new Date().toISOString().slice(0, 10)}.pptx`;
+    // Content-Disposition must be Latin-1: strip non-ASCII for the plain
+    // filename and carry the full (possibly non-Latin) name via RFC 5987.
+    const asciiName = (fname.replace(/[^\x20-\x7E]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '') || 'Follow-up') .replace(/(\.pptx)?$/, '.pptx');
+    const disposition = `attachment; filename="${asciiName}"; filename*=UTF-8''${encodeURIComponent(fname)}`;
 
     return new NextResponse(new Uint8Array(buf), {
       status: 200,
       headers: {
         'Content-Type': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-        'Content-Disposition': `attachment; filename="${fname}"`,
+        'Content-Disposition': disposition,
         'Content-Length': String(buf.length),
       },
     });

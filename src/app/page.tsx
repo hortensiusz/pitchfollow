@@ -113,7 +113,7 @@ Rules:
 
   const extractContacts = async () => {
     if (!app.notes.trim()) { alert(T('alertNoNotes')); return; }
-    setStatus('Extracting contacts…', 60000);
+    setStatus(T('btnGenerating'), 60000);
     const sys = 'Identify client-side attendee names from a sales meeting transcript. Only client names (not Chambers staff). Output ONLY a JSON string array, nothing else.';
     const user = `Meeting notes:\n${app.notes}\n\nOutput client contact names, e.g. ["Jane Smith","John Doe"]. Output [] if none found.`;
     try {
@@ -175,7 +175,7 @@ Rules:
   };
 
   const exportPPT = async () => {
-    setStatus('Generating PPTX…', 60000);
+    setStatus(T('btnGenerating'), 60000);
     try {
       const res = await fetch('/api/pptx', {
         method: 'POST',
