@@ -41,8 +41,9 @@ export default function CalcSection() {
   const [checks, setChecks] = useState<CalcChecks>({ plat: false, ins: false, mp: false, an: false, ov: false });
   const [mode, setMode] = useState<'ci' | 'cmi'>('cmi');
   const [depN, setDepN] = useState(1);
-  const [manualPrices, setManualPrices] = useState<Record<string, number>>({});
-  const [manual2yr, setManual2yr] = useState<Record<string, { y1?: number; y2?: number; up?: number }>>({});
+  // '' = field cleared while editing (falls back to the computed default)
+  const [manualPrices, setManualPrices] = useState<Record<string, number | ''>>({});
+  const [manual2yr, setManual2yr] = useState<Record<string, { y1?: number | ''; y2?: number | ''; up?: number | '' }>>({});
   const [pkgDisc, setPkgDisc] = useState(0);
   const [bundleName, setBundleName] = useState('');
   const [open, setOpen] = useState(false);
@@ -205,23 +206,26 @@ export default function CalcSection() {
     setChecks(c => scenToChecks(k, c));
   };
 
-  const resolvePrice = (r: CalcRow): number => manualPrices[r.id] ?? r.pitch;
+  // A blank ('') or absent override resolves to the computed default.
+  const num = (v: number | '' | undefined): number | null => (typeof v === 'number' ? v : null);
+
+  const resolvePrice = (r: CalcRow): number => num(manualPrices[r.id]) ?? r.pitch;
 
   // 2yr price helpers — unit prices, same basis as calcP1Default in quoteCalc
   const calcY1in2yr = (r: CalcRow): number =>
     Math.round(Math.max(r.pitch * (1 - twoYrDisc / 100), r.rep) * 100) / 100;
 
   const resolveY1in2yr = (r: CalcRow): number =>
-    manual2yr[r.id]?.y1 ?? calcY1in2yr(r);
+    num(manual2yr[r.id]?.y1) ?? calcY1in2yr(r);
 
   const resolveUplift = (r: CalcRow): number =>
-    manual2yr[r.id]?.up ?? y2Uplift;
+    num(manual2yr[r.id]?.up) ?? y2Uplift;
 
   const calcY2price = (r: CalcRow): number =>
     Math.round(resolveY1in2yr(r) * (1 + resolveUplift(r) / 100) * 100) / 100;
 
   const resolveY2 = (r: CalcRow): number =>
-    manual2yr[r.id]?.y2 ?? calcY2price(r);
+    num(manual2yr[r.id]?.y2) ?? calcY2price(r);
 
   const writeItemised = () => {
     rows.forEach(r => {
@@ -229,9 +233,9 @@ export default function CalcSection() {
       const price = resolvePrice(r);
       if (!price) return;
       const m2 = showBoth ? manual2yr[r.id] : undefined;
-      const hasY1Override = m2?.y1 !== undefined;
-      const hasY2Override = m2?.y2 !== undefined;
-      const hasUpOverride = m2?.up !== undefined;
+      const hasY1Override = typeof m2?.y1 === 'number';
+      const hasY2Override = typeof m2?.y2 === 'number';
+      const hasUpOverride = typeof m2?.up === 'number';
       addQuoteRow({
         name: r.cname,
         qty: r.isFlat ? Math.max(1, depN) : 1,
@@ -494,7 +498,7 @@ export default function CalcSection() {
                         disabled={!checks[r.id]}
                         className={`field-input w-28 text-sm text-right ${belowFloor ? 'border-red-400' : ''}`}
                         value={manualPrices[r.id] ?? r.pitch}
-                        onChange={e => setManualPrices(p => ({ ...p, [r.id]: +e.target.value || 0 }))}
+                        onChange={e => { const v = e.target.value; setManualPrices(p => ({ ...p, [r.id]: v === '' ? '' : Math.max(0, +v || 0) })); }}
                       />
                       {belowFloor && <span className="text-red-500 text-xs">Below MGR floor</span>}
                     </div>
@@ -545,7 +549,7 @@ export default function CalcSection() {
                               disabled={!checks[r.id]}
                               className={`field-input w-24 text-sm text-right ${belowFloor ? 'border-red-400' : ''}`}
                               value={manualPrices[r.id] ?? r.pitch}
-                              onChange={e => setManualPrices(p => ({ ...p, [r.id]: +e.target.value || 0 }))}
+                              onChange={e => { const v = e.target.value; setManualPrices(p => ({ ...p, [r.id]: v === '' ? '' : Math.max(0, +v || 0) })); }}
                             />
                             {belowFloor && <span className="text-red-500 text-xs">Below MGR</span>}
                           </div>
@@ -569,7 +573,7 @@ export default function CalcSection() {
                       const y1 = manual2yr[r.id]?.y1 ?? calcY1in2yr(r);
                       const upVal = manual2yr[r.id]?.up ?? y2Uplift;
                       const y2 = manual2yr[r.id]?.y2 ?? calcY2price(r);
-                      const y1BelowFloor = y1 < r.lo - 0.5;
+                      const y1BelowFloor = typeof y1 === 'number' && y1 < r.lo - 0.5;
                       const isChecked = !!checks[r.id];
                       return (
                         <div key={r.id} className={`p-2.5 rounded-md border transition-opacity ${isChecked ? 'bg-[#EEF3EE]/40 border-emerald-100' : 'bg-[#FAF9F6] border-[var(--hairline)] opacity-50'}`}>
@@ -583,7 +587,7 @@ export default function CalcSection() {
                                 className={`field-input w-full text-sm text-right ${y1BelowFloor ? 'border-red-400' : ''}`}
                                 value={y1}
                                 onChange={e => {
-                                  const val = +e.target.value || 0;
+                                  const v = e.target.value; const val = v === '' ? '' : Math.max(0, +v || 0);
                                   setManual2yr(p => ({ ...p, [r.id]: { ...p[r.id], y1: val, y2: undefined } }));
                                 }}
                               />
@@ -597,7 +601,7 @@ export default function CalcSection() {
                                 className="field-input w-full text-sm text-right"
                                 value={upVal}
                                 onChange={e => {
-                                  const val = +e.target.value || 0;
+                                  const v = e.target.value; const val = v === '' ? '' : Math.max(0, +v || 0);
                                   setManual2yr(p => ({ ...p, [r.id]: { ...p[r.id], up: val, y2: undefined } }));
                                 }}
                               />
@@ -610,7 +614,7 @@ export default function CalcSection() {
                                 className="field-input w-full text-sm text-right"
                                 value={y2}
                                 onChange={e => {
-                                  const val = +e.target.value || 0;
+                                  const v = e.target.value; const val = v === '' ? '' : Math.max(0, +v || 0);
                                   setManual2yr(p => ({ ...p, [r.id]: { ...p[r.id], y2: val } }));
                                 }}
                               />
