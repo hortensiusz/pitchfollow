@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useStore } from '@/lib/store';
 import { t, SECTION_DEFS } from '@/lib/i18n';
 import { aiComplete, parseAiJson } from '@/lib/aiService';
@@ -12,26 +12,23 @@ import QuoteSection from '@/components/QuoteSection';
 import CalcSection from '@/components/CalcSection';
 import OutputPanel from '@/components/dialogs/OutputPanel';
 
-type PanelKind = 'summary' | 'email' | null;
+type CommsOut = {
+  summary: { hint: string; content: string } | null;
+  email: { hint: string; content: [string, string, string] } | null;
+};
 
 export default function Home() {
   const store = useStore();
   const { app, setSectionItems, setSection, setContacts, priceList, uiLang, setStatus, saveState, loadState, resetAll } = store;
   const T = useCallback((k: Parameters<typeof t>[0]) => t(k, uiLang), [uiLang]);
 
-  const panelRef = useRef<HTMLDivElement>(null);
   const [step, setStep] = useState(1);
-  const [panel, setPanel] = useState<PanelKind>(null);
-  const [panelTitle, setPanelTitle] = useState('');
-  const [panelHint, setPanelHint] = useState('');
-  const [panelContent, setPanelContent] = useState<string | [string, string, string]>('');
+  const [comms, setComms] = useState<CommsOut>({ summary: null, email: null });
+  const [commsBusy, setCommsBusy] = useState(false);
   const [genBusy, setGenBusy] = useState(false);
   const [extractBusy, setExtractBusy] = useState(false);
 
   useEffect(() => { loadState(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => {
-    if (panel) panelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, [panel]);
 
   const collectContext = useCallback(() => {
     const L: string[] = [];
@@ -113,49 +110,54 @@ Rules:
     finally { setExtractBusy(false); }
   };
 
-  const genSummary = async () => {
-    const ctx = collectContext();
-    const notes = app.notes.trim();
-    const sys = 'You are a Chambers sales team assistant writing a concise internal follow-up record in UK English. Base only on the provided material. Distinguish confirmed/pending/risk. Format for CRM archiving. Never fabricate quotes, facts, or contact details.';
-    const user = `Write an internal follow-up summary.\nStructure: 1) Overview (2-3 sentences) 2) Client needs & concerns 3) Our proposed solution & quote highlights 4) Next actions (owners & deadlines; mark TBC if unknown) 5) Risks & notes.\n\n=== Structured data ===\n${ctx}\n\n=== Meeting notes ===\n${notes || '(not provided)'}`;
-    setPanelTitle(T('sumTitleGen'));
-    setPanel('summary');
-    setPanelHint(T('sumHintCalling')); setPanelContent('');
-    try {
-      const out = await aiComplete(sys, user);
-      setPanelHint(T('sumHintDone')); setPanelContent(out.trim());
-    } catch (err: any) {
-      setPanelHint(T('sumHintFail') + err.message);
-      setPanelContent('');
-    }
+  const parseEmailVersions = (out: string): [string, string, string] => {
+    const re = /===\s*Version\s*([1-3])[^\n]*===/gi;
+    const idxs: { n: number; end: number; start: number }[] = [];
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(out)) !== null) idxs.push({ n: +m[1], end: re.lastIndex, start: m.index });
+    const vs: [string, string, string] = ['', '', ''];
+    if (idxs.length) {
+      for (let i = 0; i < idxs.length; i++) {
+        const s = idxs[i].end, e = i + 1 < idxs.length ? idxs[i + 1].start : out.length, v = idxs[i].n;
+        if (v >= 1 && v <= 3) vs[v - 1] = out.slice(s, e).trim();
+      }
+    } else vs[0] = out.trim();
+    return vs;
   };
 
-  const genEmail = async () => {
-    const ctx = collectContext(); const notes = app.notes.trim();
+  // One click → generate BOTH the internal summary (always UK English) and the
+  // client follow-up email (selected language), shown together.
+  const genComms = async () => {
+    const ctx = collectContext();
+    const notes = app.notes.trim();
+    setCommsBusy(true);
+    setComms({
+      summary: { hint: T('sumHintCalling'), content: '' },
+      email: { hint: T('sumHintCalling'), content: ['', '', ''] },
+    });
+
+    const sumSys = 'You are a Chambers sales team assistant writing a concise internal follow-up record in UK English. Base only on the provided material. Distinguish confirmed/pending/risk. Format for CRM archiving. Never fabricate quotes, facts, or contact details.';
+    const sumUser = `Write an internal follow-up summary.\nStructure: 1) Overview (2-3 sentences) 2) Client needs & concerns 3) Our proposed solution & quote highlights 4) Next actions (owners & deadlines; mark TBC if unknown) 5) Risks & notes.\n\n=== Structured data ===\n${ctx}\n\n=== Meeting notes ===\n${notes || '(not provided)'}`;
+
     const OUT: Record<string, string> = { en: 'English', zh: '简体中文', zhTW: '繁體中文', fr: 'French (français)', de: 'German (Deutsch)', ptBR: 'Brazilian Portuguese (português do Brasil)' };
     const outLang = OUT[app.lang] || 'English';
-    const sys = `You are a Chambers (legal intelligence firm) sales advisor writing a post-meeting client follow-up email. Generate THREE distinct versions:\n=== Version 1 — Short, sharp & sweet ===\n=== Version 2 — Conversational ===\n=== Version 3 — Professional & structured ===\nAll three in ${outLang}. Each must include: Subject:, greeting, thanks, recap, solution/quote highlights, next steps, sign-off. Base only on provided material. Never fabricate facts or prices. Output only the three versions with the === headers above.`;
-    const user = `=== Structured data ===\n${ctx}\n\n=== Meeting notes ===\n${notes || '(not provided)'}`;
-    setPanelTitle(T('emailTitle')); setPanel('email');
-    setPanelHint(T('sumHintCalling')); setPanelContent(['', '', '']);
-    try {
-      const out = await aiComplete(sys, user);
-      const re = /===\s*Version\s*([1-3])[^\n]*===/gi;
-      const idxs: { n: number; end: number; start: number }[] = [];
-      let m: RegExpExecArray | null;
-      while ((m = re.exec(out)) !== null) idxs.push({ n: +m[1], end: re.lastIndex, start: m.index });
-      const vs: [string, string, string] = ['', '', ''];
-      if (idxs.length) {
-        for (let i = 0; i < idxs.length; i++) {
-          const s = idxs[i].end, e = i + 1 < idxs.length ? idxs[i + 1].start : out.length, v = idxs[i].n;
-          if (v >= 1 && v <= 3) vs[v - 1] = out.slice(s, e).trim();
-        }
-      } else vs[0] = out.trim();
-      setPanelHint(T('emailHintDone')); setPanelContent(vs);
-    } catch (err: any) {
-      setPanelHint(T('sumHintFail') + err.message);
-      setPanelContent(['', '', '']);
-    }
+    const emSys = `You are a Chambers (legal intelligence firm) sales advisor writing a post-meeting client follow-up email. Generate THREE distinct versions:\n=== Version 1 — Short, sharp & sweet ===\n=== Version 2 — Conversational ===\n=== Version 3 — Professional & structured ===\nAll three in ${outLang}. Each must include: Subject:, greeting, thanks, recap, solution/quote highlights, next steps, sign-off. Base only on provided material. Never fabricate facts or prices. Output only the three versions with the === headers above.`;
+    const emUser = `=== Structured data ===\n${ctx}\n\n=== Meeting notes ===\n${notes || '(not provided)'}`;
+
+    const [sumRes, emRes] = await Promise.allSettled([
+      aiComplete(sumSys, sumUser),
+      aiComplete(emSys, emUser),
+    ]);
+
+    setComms({
+      summary: sumRes.status === 'fulfilled'
+        ? { hint: T('sumHintDone'), content: sumRes.value.trim() }
+        : { hint: T('sumHintFail') + (sumRes.reason?.message ?? ''), content: '' },
+      email: emRes.status === 'fulfilled'
+        ? { hint: T('emailHintDone'), content: parseEmailVersions(emRes.value) }
+        : { hint: T('sumHintFail') + (emRes.reason?.message ?? ''), content: ['', '', ''] },
+    });
+    setCommsBusy(false);
   };
 
   const exportPPT = async () => {
@@ -263,16 +265,23 @@ Rules:
 
           {step === 4 && (
             <>
-              <div className="flex flex-wrap gap-3">
-                <button onClick={genSummary} className="btn-ghost text-sm">{T('btnSummary')}</button>
-                <button onClick={genEmail} className="btn-ghost text-sm">{T('btnFollowupEmail')}</button>
+              <div className="flex flex-wrap gap-3 items-center">
+                <button onClick={genComms} disabled={commsBusy} className="btn-primary text-sm disabled:opacity-50">
+                  {T('btnGenComms')}
+                </button>
+                {commsBusy
+                  ? <span className="text-xs text-[var(--accent)] font-medium animate-pulse">{T('btnGenerating')}</span>
+                  : <span className="text-xs text-[var(--muted)]">{T('commsHint')}</span>}
               </div>
-              {panel && (
-                <div ref={panelRef}>
-                  <OutputPanel kind={panel} title={panelTitle} hint={panelHint}
-                    content={panelContent as string | [string, string, string]}
-                    onClose={() => setPanel(null)} />
-                </div>
+              {comms.email && (
+                <OutputPanel kind="email" title={T('emailTitle')} hint={comms.email.hint}
+                  content={comms.email.content}
+                  onClose={() => setComms(c => ({ ...c, email: null }))} />
+              )}
+              {comms.summary && (
+                <OutputPanel kind="summary" title={T('sumTitleGen')} hint={comms.summary.hint}
+                  content={comms.summary.content}
+                  onClose={() => setComms(c => ({ ...c, summary: null }))} />
               )}
             </>
           )}

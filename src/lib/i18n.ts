@@ -42,7 +42,8 @@ export type I18nKey =
   | 'lblQuoteTerm' | 'lblTwoYrDisc' | 'uploadNotes' | 'uploadDone' | 'uploadFail'
   | 'thanks' | 'uploadParsing'
   | 'stepWord' | 'navStep1' | 'navStep2' | 'navStep3' | 'navStep4'
-  | 'navStep1Sub' | 'navStep2Sub' | 'navStep3Sub' | 'navStep4Sub' | 'step2Empty';
+  | 'navStep1Sub' | 'navStep2Sub' | 'navStep3Sub' | 'navStep4Sub' | 'step2Empty'
+  | 'btnGenComms' | 'commsHint';
 
 type I18nMap = Record<I18nKey, [string, string, string, string, string, string]>;
 
@@ -179,6 +180,8 @@ export const I18N: I18nMap = {
   navStep3Sub:       ['Price & build the quote', '定价与报价', '定價與報價', 'Tarif & devis', 'Preis & Angebot', 'Preço e cotação'],
   navStep4Sub:       ['Draft client comms', '生成沟通文案', '生成溝通文案', 'Rédiger les messages', 'Nachrichten verfassen', 'Redigir mensagens'],
   step2Empty:        ['No AI content yet. Go to Step 1, paste meeting notes and generate the section points.', '暂无 AI 内容。请回到步骤 1，粘贴会议记录并生成各版块要点。', '尚無 AI 內容。請回到步驟 1，貼上會議記錄並產生各版塊要點。', 'Aucun contenu IA. Revenez à l\'étape 1, collez les notes et générez les points.', 'Noch kein KI-Inhalt. Gehen Sie zu Schritt 1, fügen Sie Notizen ein und generieren Sie die Punkte.', 'Sem conteúdo de IA. Volte à etapa 1, cole as notas e gere os tópicos.'],
+  btnGenComms:       ['✨ Generate email & internal summary', '✨ 一键生成邮件和内部总结', '✨ 一鍵產生郵件和內部總結', '✨ Générer e-mail & résumé interne', '✨ E-Mail & interne Zusammenfassung erstellen', '✨ Gerar e-mail e resumo interno'],
+  commsHint:         ['The follow-up email is in your selected language; the internal summary is always in English.', '跟进邮件使用所选语言；内部总结始终为英文。', '跟進郵件使用所選語言；內部總結始終為英文。', 'L\'e-mail de suivi est dans la langue choisie ; le résumé interne est toujours en anglais.', 'Die Follow-up-E-Mail ist in der gewählten Sprache; die interne Zusammenfassung immer auf Englisch.', 'O e-mail de acompanhamento está no idioma escolhido; o resumo interno é sempre em inglês.'],
 };
 
 const LANG_IDX: Record<LangCode, number> = { en: 0, zh: 1, zhTW: 2, fr: 3, de: 4, ptBR: 5 };
