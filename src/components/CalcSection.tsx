@@ -28,7 +28,9 @@ export default function CalcSection() {
   const quote = app.quote;
   const twoYrDisc = quote.twoYrDisc;
   const y2Uplift = quote.y2Uplift;
-  const showBoth = quote.term === 'both';
+  // Calculator always shows both 1-year and 2-year for comparison; the term
+  // that goes into the PPT is chosen separately in the Commercial Proposal.
+  const showBoth = true;
 
   const [loaded, setLoaded] = useState(false);
   const [firmQ, setFirmQ] = useState('');
@@ -632,21 +634,6 @@ export default function CalcSection() {
             <p className="text-sm text-[var(--muted)]">No pricing data available for this entry.</p>
           )}
 
-          {/* Bundle rules (collapsed) */}
-          {_rc && _rc.bundleRules && _rc.bundleRules.length > 0 && (
-            <details className="text-xs text-[var(--muted)]">
-              <summary className="cursor-pointer hover:text-[#3A4A57] select-none">Bundle rules reference</summary>
-              <div className="mt-1 space-y-1 pl-2 border-l-2 border-[var(--hairline)] max-h-40 overflow-y-auto">
-                {_rc.bundleRules.map((br, i) => (
-                  <div key={i}>
-                    <strong>{br.region}</strong> · {br.scenario} · {br.bundle} · {br.product}:
-                    {' '}Pitch {br.pitch}; REP {br.repDisc}
-                  </div>
-                ))}
-              </div>
-            </details>
-          )}
-
           {/* Package discount + totals summary */}
           {rows.length > 0 && (() => {
             const selRows = rows.filter(r => checks[r.id]);
@@ -707,10 +694,10 @@ export default function CalcSection() {
                 onChange={e => setBundleName(e.target.value)}
               />
               <button onClick={writeBundle} className="btn-ghost text-sm">
-                {showBoth ? 'Write bundle (both)' : 'Write as bundle'}
+                Write as bundle
               </button>
               <button onClick={writeItemised} className="btn-primary text-sm">
-                {showBoth ? 'Write itemised (both)' : 'Write itemised'}
+                Write itemised
               </button>
             </div>
           )}

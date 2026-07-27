@@ -6,9 +6,10 @@ import { Card } from './ui/Card';
 
 interface Props {
   onGenSections: () => void;
+  genBusy?: boolean;
 }
 
-export default function MeetingNotesSection({ onGenSections }: Props) {
+export default function MeetingNotesSection({ onGenSections, genBusy }: Props) {
   const { app, setApp, uiLang, saveState } = useStore();
   const T = (k: Parameters<typeof t>[0]) => t(k, uiLang);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -90,10 +91,12 @@ export default function MeetingNotesSection({ onGenSections }: Props) {
             >
               {uploading ? T('uploadParsing') : T('uploadNotes')}
             </button>
-            <button onClick={onGenSections} className="btn-primary text-sm">
+            <button onClick={onGenSections} disabled={genBusy} className="btn-primary text-sm disabled:opacity-50">
               {T('btnGenSec')}
             </button>
-            <span className="text-xs text-[var(--muted)]">{T('hintNotes')}</span>
+            {genBusy
+              ? <span className="text-xs text-[var(--accent)] font-medium animate-pulse">{T('btnGenerating')}</span>
+              : <span className="text-xs text-[var(--muted)]">{T('hintNotes')}</span>}
           </div>
         </div>
       </details>

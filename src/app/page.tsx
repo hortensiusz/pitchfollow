@@ -24,6 +24,8 @@ export default function Home() {
   const [panelTitle, setPanelTitle] = useState('');
   const [panelHint, setPanelHint] = useState('');
   const [panelContent, setPanelContent] = useState<string | [string, string, string]>('');
+  const [genBusy, setGenBusy] = useState(false);
+  const [extractBusy, setExtractBusy] = useState(false);
 
   useEffect(() => { loadState(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
@@ -59,7 +61,7 @@ export default function Home() {
     if (!app.notes.trim()) { alert(T('alertNoNotes')); return; }
     const hasContent = SECTION_DEFS.some(d => app.secs[d.id]?.items.length);
     if (hasContent && !confirm(T('confirmOverwrite'))) return;
-    setStatus(T('btnGenerating'), 60000);
+    setGenBusy(true);
     const OUT: Record<string, string> = { en: 'English', zh: '简体中文', zhTW: '繁體中文', fr: 'French (français)', de: 'German (Deutsch)', ptBR: 'Brazilian Portuguese (português do Brasil)' };
     const outLang = OUT[app.lang] || 'English';
     const sys = `You are writing slide bullet points for a client-facing follow-up presentation from Chambers (a legal intelligence firm). The audience is the client — write directly TO them, as if the slide deck is addressed to their firm.
@@ -86,12 +88,13 @@ Rules:
       });
       saveState();
       setStatus(T('genSecDone').replace('{n}', String(filled)));
-    } catch (err: any) { alert(T('genFail') + err.message); setStatus(''); }
+    } catch (err: any) { alert(T('genFail') + err.message); }
+    finally { setGenBusy(false); }
   };
 
   const extractContacts = async () => {
     if (!app.notes.trim()) { alert(T('alertNoNotes')); return; }
-    setStatus(T('btnGenerating'), 60000);
+    setExtractBusy(true);
     const sys = 'Identify client-side attendee names from a sales meeting transcript. Only client names (not Chambers staff). Output ONLY a JSON string array, nothing else.';
     const user = `Meeting notes:\n${app.notes}\n\nOutput client contact names, e.g. ["Jane Smith","John Doe"]. Output [] if none found.`;
     try {
@@ -104,7 +107,8 @@ Rules:
         saveState();
         setStatus(T('contactsExtracted'));
       } else setStatus(T('contactsNone'));
-    } catch (err: any) { alert(T('genFail') + err.message); setStatus(''); }
+    } catch (err: any) { alert(T('genFail') + err.message); }
+    finally { setExtractBusy(false); }
   };
 
   const genSummary = async () => {
@@ -186,8 +190,8 @@ Rules:
       <AppHeader onSummary={genSummary} onEmail={genEmail} />
 
       <main className="max-w-4xl mx-auto px-6 pt-10 pb-32 flex flex-col gap-8">
-        <BasicInfoSection onExtractContacts={extractContacts} />
-        <MeetingNotesSection onGenSections={genSections} />
+        <BasicInfoSection onExtractContacts={extractContacts} extractBusy={extractBusy} />
+        <MeetingNotesSection onGenSections={genSections} genBusy={genBusy} />
         {SECTION_DEFS.map(def => <ContentSection key={def.id} def={def} />)}
         <CalcSection />
         <QuoteSection />

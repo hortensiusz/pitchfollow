@@ -12,9 +12,10 @@ const CURRENCY_LABELS: Record<CurrencyCode, string> = { '£': 'GBP £', '$': 'US
 
 interface Props {
   onExtractContacts: () => void;
+  extractBusy?: boolean;
 }
 
-export default function BasicInfoSection({ onExtractContacts }: Props) {
+export default function BasicInfoSection({ onExtractContacts, extractBusy }: Props) {
   const { app, setApp, setContacts, setUiLang, uiLang, saveState } = useStore();
   const T = (k: Parameters<typeof t>[0]) => t(k, uiLang);
   const save = useCallback(() => saveState(), [saveState]);
@@ -122,13 +123,16 @@ export default function BasicInfoSection({ onExtractContacts }: Props) {
                 )}
               </div>
             ))}
-            <div className="flex gap-2 mt-1">
+            <div className="flex gap-2 mt-1 items-center">
               <button onClick={addContact} className="btn-ghost text-sm py-1 px-2">
                 {T('btnAddContact')}
               </button>
-              <button onClick={onExtractContacts} className="btn-ghost text-sm py-1 px-2">
+              <button onClick={onExtractContacts} disabled={extractBusy} className="btn-ghost text-sm py-1 px-2 disabled:opacity-50">
                 {T('btnExtractContacts')}
               </button>
+              {extractBusy && (
+                <span className="text-xs text-[var(--accent)] font-medium animate-pulse">{T('btnGenerating')}</span>
+              )}
             </div>
           </div>
         </div>
