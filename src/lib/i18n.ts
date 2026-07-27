@@ -40,7 +40,9 @@ export type I18nKey =
   | 'contactsNone' | 'emailTitle' | 'emailHintDone' | 'term1y' | 'term2y' | 'termBoth'
   | 'confirmReset' | 'optionWord' | 'oneYearTerm' | 'twoYearTerm' | 'deptsWord'
   | 'lblQuoteTerm' | 'lblTwoYrDisc' | 'uploadNotes' | 'uploadDone' | 'uploadFail'
-  | 'thanks' | 'uploadParsing';
+  | 'thanks' | 'uploadParsing'
+  | 'stepWord' | 'navStep1' | 'navStep2' | 'navStep3' | 'navStep4'
+  | 'navStep1Sub' | 'navStep2Sub' | 'navStep3Sub' | 'navStep4Sub' | 'step2Empty';
 
 type I18nMap = Record<I18nKey, [string, string, string, string, string, string]>;
 
@@ -167,6 +169,16 @@ export const I18N: I18nMap = {
   uploadFail:        ['Upload failed: ', '上传失败：', '上傳失敗：', 'Échec du chargement : ', 'Upload fehlgeschlagen: ', 'Falha no upload: '],
   uploadParsing:     ['Parsing file…', '正在解析文件…', '正在解析檔案…', 'Analyse du fichier…', 'Datei wird gelesen…', 'Lendo o arquivo…'],
   thanks:            ['Thank you', '感谢您', '感謝您', 'Merci', 'Vielen Dank', 'Obrigado'],
+  stepWord:          ['Step', '步骤', '步驟', 'Étape', 'Schritt', 'Etapa'],
+  navStep1:          ['Basics & notes', '基本信息与记录', '基本資訊與記錄', 'Infos & notes', 'Grunddaten & Notizen', 'Dados e notas'],
+  navStep2:          ['AI content', 'AI 提取内容', 'AI 擷取內容', 'Contenu IA', 'KI-Inhalt', 'Conteúdo de IA'],
+  navStep3:          ['Calculator & proposal', '计算器与报价', '計算器與報價', 'Calcul & devis', 'Rechner & Angebot', 'Cálculo e proposta'],
+  navStep4:          ['Email & summary', '邮件与总结', '郵件與總結', 'E-mail & résumé', 'E-Mail & Zusammenfassung', 'E-mail e resumo'],
+  navStep1Sub:       ['Client, meeting notes', '客户与会议记录', '客戶與會議記錄', 'Client, notes', 'Kunde, Notizen', 'Cliente, notas'],
+  navStep2Sub:       ['Review AI bullet points', '复核 AI 要点', '複核 AI 要點', 'Vérifier les points IA', 'KI-Punkte prüfen', 'Revisar tópicos de IA'],
+  navStep3Sub:       ['Price & build the quote', '定价与报价', '定價與報價', 'Tarif & devis', 'Preis & Angebot', 'Preço e cotação'],
+  navStep4Sub:       ['Draft client comms', '生成沟通文案', '生成溝通文案', 'Rédiger les messages', 'Nachrichten verfassen', 'Redigir mensagens'],
+  step2Empty:        ['No AI content yet. Go to Step 1, paste meeting notes and generate the section points.', '暂无 AI 内容。请回到步骤 1，粘贴会议记录并生成各版块要点。', '尚無 AI 內容。請回到步驟 1，貼上會議記錄並產生各版塊要點。', 'Aucun contenu IA. Revenez à l\'étape 1, collez les notes et générez les points.', 'Noch kein KI-Inhalt. Gehen Sie zu Schritt 1, fügen Sie Notizen ein und generieren Sie die Punkte.', 'Sem conteúdo de IA. Volte à etapa 1, cole as notas e gere os tópicos.'],
 };
 
 const LANG_IDX: Record<LangCode, number> = { en: 0, zh: 1, zhTW: 2, fr: 3, de: 4, ptBR: 5 };

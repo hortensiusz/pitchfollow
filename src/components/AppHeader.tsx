@@ -5,18 +5,13 @@ import type { LangCode } from '@/lib/types';
 
 const LANGS: LangCode[] = ['en', 'zh', 'zhTW', 'fr', 'de', 'ptBR'];
 
-interface Props {
-  onSummary: () => void;
-  onEmail: () => void;
-}
-
-export default function AppHeader({ onSummary, onEmail }: Props) {
+export default function AppHeader() {
   const { uiLang, setUiLang, statusMsg } = useStore();
   const T = (k: Parameters<typeof t>[0]) => t(k, uiLang);
 
   return (
     <header className="sticky top-0 z-30 border-b border-[var(--hairline)] bg-[var(--ground)]/85 backdrop-blur-sm">
-      <div className="max-w-4xl mx-auto px-6 h-16 flex items-center justify-between gap-4">
+      <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between gap-4">
         <div className="flex items-center gap-2.5 min-w-0">
           <span className="text-[13px] font-semibold tracking-[0.18em] uppercase text-[#002B49] whitespace-nowrap">
             Chambers
@@ -27,9 +22,9 @@ export default function AppHeader({ onSummary, onEmail }: Props) {
           </span>
         </div>
 
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-3">
           {statusMsg && (
-            <span className="hidden md:inline text-[11px] text-[var(--accent)] mr-2 whitespace-nowrap">
+            <span className="hidden md:inline text-[11px] text-[var(--accent)] whitespace-nowrap">
               {statusMsg}
             </span>
           )}
@@ -41,22 +36,8 @@ export default function AppHeader({ onSummary, onEmail }: Props) {
           >
             {LANGS.map(l => <option key={l} value={l}>{LANG_LABELS[l]}</option>)}
           </select>
-          <span className="w-px h-4 bg-[var(--hairline-strong)] mx-1.5" />
-          <HeaderBtn onClick={onSummary}>{T('btnSummary')}</HeaderBtn>
-          <HeaderBtn onClick={onEmail}>{T('btnFollowupEmail')}</HeaderBtn>
         </div>
       </div>
     </header>
-  );
-}
-
-function HeaderBtn({ children, onClick }: { children: React.ReactNode; onClick: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      className="text-[12.5px] text-[#002B49] px-2.5 py-1.5 rounded hover:bg-[var(--beige)] transition-colors whitespace-nowrap"
-    >
-      {children}
-    </button>
   );
 }

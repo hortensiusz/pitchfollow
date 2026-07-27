@@ -20,6 +20,7 @@ export default function Home() {
   const T = useCallback((k: Parameters<typeof t>[0]) => t(k, uiLang), [uiLang]);
 
   const panelRef = useRef<HTMLDivElement>(null);
+  const [step, setStep] = useState(1);
   const [panel, setPanel] = useState<PanelKind>(null);
   const [panelTitle, setPanelTitle] = useState('');
   const [panelHint, setPanelHint] = useState('');
@@ -88,6 +89,7 @@ Rules:
       });
       saveState();
       setStatus(T('genSecDone').replace('{n}', String(filled)));
+      if (filled) setStep(2); // advance to review the AI-extracted content
     } catch (err: any) { alert(T('genFail') + err.message); }
     finally { setGenBusy(false); }
   };
@@ -185,32 +187,122 @@ Rules:
     } catch (err: any) { alert('PPTX export failed: ' + err.message); setStatus(''); }
   };
 
+  const STEPS = [
+    { n: 1, label: T('navStep1'), sub: T('navStep1Sub') },
+    { n: 2, label: T('navStep2'), sub: T('navStep2Sub') },
+    { n: 3, label: T('navStep3'), sub: T('navStep3Sub') },
+    { n: 4, label: T('navStep4'), sub: T('navStep4Sub') },
+  ];
+  const hasSections = SECTION_DEFS.some(d => app.secs[d.id]?.items.length);
+
   return (
     <div className="min-h-screen bg-[var(--ground)]">
-      <AppHeader onSummary={genSummary} onEmail={genEmail} />
+      <AppHeader />
 
-      <main className="max-w-4xl mx-auto px-6 pt-10 pb-32 flex flex-col gap-8">
-        <BasicInfoSection onExtractContacts={extractContacts} extractBusy={extractBusy} />
-        <MeetingNotesSection onGenSections={genSections} genBusy={genBusy} />
-        {SECTION_DEFS.map(def => <ContentSection key={def.id} def={def} />)}
-        <CalcSection />
-        <QuoteSection />
-        {panel && (
-          <div ref={panelRef}>
-            <OutputPanel kind={panel} title={panelTitle} hint={panelHint}
-              content={panelContent as string | [string, string, string]}
-              onClose={() => setPanel(null)} />
+      <div className="max-w-6xl mx-auto px-6 pt-8 pb-32 flex gap-10">
+        {/* ── Left workflow rail ─────────────────────────────────────── */}
+        <nav className="w-52 shrink-0 hidden md:block">
+          <div className="sticky top-24 flex flex-col">
+            {STEPS.map((s, i) => {
+              const active = step === s.n;
+              return (
+                <button
+                  key={s.n}
+                  onClick={() => setStep(s.n)}
+                  className={`group text-left flex gap-3 items-start py-3.5 ${i > 0 ? 'border-t border-[var(--hairline)]' : ''}`}
+                >
+                  <span
+                    className={`mt-0.5 w-6 h-6 shrink-0 rounded-full border flex items-center justify-center text-[11px] font-semibold transition-colors ${
+                      active
+                        ? 'bg-[#002B49] border-[#002B49] text-white'
+                        : 'border-[var(--hairline-strong)] text-[var(--muted)] group-hover:border-[#002B49] group-hover:text-[#002B49]'
+                    }`}
+                  >{s.n}</span>
+                  <span className="min-w-0">
+                    <span className={`block text-[13.5px] leading-tight ${active ? 'font-semibold text-[#002B49]' : 'text-[#3A4A57]'}`}>{s.label}</span>
+                    <span className="block text-[11px] text-[var(--muted)] mt-0.5">{s.sub}</span>
+                  </span>
+                </button>
+              );
+            })}
           </div>
-        )}
-      </main>
+        </nav>
 
+        {/* ── Right content area ─────────────────────────────────────── */}
+        <main className="flex-1 min-w-0 flex flex-col gap-8">
+          {/* Mobile step selector */}
+          <div className="md:hidden flex gap-2 flex-wrap">
+            {STEPS.map(s => (
+              <button key={s.n} onClick={() => setStep(s.n)}
+                className={`text-xs px-3 py-1.5 rounded-full border ${step === s.n ? 'bg-[#002B49] text-white border-[#002B49]' : 'border-[var(--hairline-strong)] text-[var(--muted)]'}`}>
+                {s.n}. {s.label}
+              </button>
+            ))}
+          </div>
+
+          <div>
+            <p className="eyebrow mb-1">{T('stepWord')} {step}</p>
+            <h2 className="text-[22px] font-semibold text-[#002B49] tracking-tight">{STEPS[step - 1].label}</h2>
+          </div>
+
+          {step === 1 && (
+            <>
+              <BasicInfoSection onExtractContacts={extractContacts} extractBusy={extractBusy} />
+              <MeetingNotesSection onGenSections={genSections} genBusy={genBusy} />
+            </>
+          )}
+
+          {step === 2 && (
+            hasSections
+              ? SECTION_DEFS.map(def => <ContentSection key={def.id} def={def} />)
+              : (
+                <div className="rounded-md border border-dashed border-[var(--hairline-strong)] bg-[var(--surface)] px-6 py-10 text-center">
+                  <p className="text-sm text-[var(--muted)] max-w-md mx-auto">{T('step2Empty')}</p>
+                  <button onClick={() => setStep(1)} className="btn-ghost text-sm mt-4">← {T('navStep1')}</button>
+                </div>
+              )
+          )}
+
+          {step === 3 && (
+            <>
+              <CalcSection />
+              <QuoteSection />
+            </>
+          )}
+
+          {step === 4 && (
+            <>
+              <div className="flex flex-wrap gap-3">
+                <button onClick={genSummary} className="btn-ghost text-sm">{T('btnSummary')}</button>
+                <button onClick={genEmail} className="btn-ghost text-sm">{T('btnFollowupEmail')}</button>
+              </div>
+              {panel && (
+                <div ref={panelRef}>
+                  <OutputPanel kind={panel} title={panelTitle} hint={panelHint}
+                    content={panelContent as string | [string, string, string]}
+                    onClose={() => setPanel(null)} />
+                </div>
+              )}
+            </>
+          )}
+        </main>
+      </div>
+
+      {/* ── Persistent action bar ──────────────────────────────────── */}
       <div className="fixed bottom-0 left-0 right-0 bg-[var(--ground)]/90 backdrop-blur-sm border-t border-[var(--hairline)] z-40">
-        <div className="max-w-4xl mx-auto px-6 py-3.5 flex justify-between items-center gap-4">
+        <div className="max-w-6xl mx-auto px-6 py-3.5 flex justify-between items-center gap-4">
           <button
             onClick={() => { if (confirm(T('confirmReset'))) resetAll(); }}
             className="text-[13px] text-[var(--muted)] hover:text-[#a3312a] transition-colors"
           >{T('btnReset')}</button>
-          <button onClick={exportPPT} className="btn-primary px-8">{T('btnExport')}</button>
+          <div className="flex items-center gap-4">
+            {step < 4 && (
+              <button onClick={() => setStep(step + 1)} className="text-[13px] text-[#002B49] hover:text-[var(--accent)] transition-colors">
+                {STEPS[step].label} →
+              </button>
+            )}
+            <button onClick={exportPPT} className="btn-primary px-8">{T('btnExport')}</button>
+          </div>
         </div>
       </div>
     </div>
