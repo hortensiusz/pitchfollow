@@ -199,18 +199,19 @@ Rules:
     <div className="min-h-screen bg-[var(--ground)]">
       <AppHeader />
 
-      <div className="max-w-6xl mx-auto px-6 pt-8 pb-32 flex gap-10">
-        {/* ── Left workflow rail ─────────────────────────────────────── */}
-        <nav className="w-52 shrink-0 hidden md:block">
-          <div className="sticky top-24 flex flex-col">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-8 pb-32 flex gap-6 md:gap-10">
+        {/* ── Left workflow menu (always visible) ────────────────────── */}
+        <nav className="w-44 sm:w-56 shrink-0">
+          <div className="sticky top-24 flex flex-col rounded-md border border-[var(--hairline)] bg-[var(--surface)] overflow-hidden">
             {STEPS.map((s, i) => {
               const active = step === s.n;
               return (
                 <button
                   key={s.n}
                   onClick={() => setStep(s.n)}
-                  className={`group text-left flex gap-3 items-start py-3.5 ${i > 0 ? 'border-t border-[var(--hairline)]' : ''}`}
+                  className={`group relative text-left flex gap-3 items-start px-4 py-3.5 transition-colors ${i > 0 ? 'border-t border-[var(--hairline)]' : ''} ${active ? 'bg-[var(--beige)]/50' : 'hover:bg-[#FAF9F6]'}`}
                 >
+                  {active && <span className="absolute left-0 top-0 bottom-0 w-[3px] bg-[#006CE0]" />}
                   <span
                     className={`mt-0.5 w-6 h-6 shrink-0 rounded-full border flex items-center justify-center text-[11px] font-semibold transition-colors ${
                       active
@@ -219,7 +220,7 @@ Rules:
                     }`}
                   >{s.n}</span>
                   <span className="min-w-0">
-                    <span className={`block text-[13.5px] leading-tight ${active ? 'font-semibold text-[#002B49]' : 'text-[#3A4A57]'}`}>{s.label}</span>
+                    <span className={`block text-[13px] leading-tight ${active ? 'font-semibold text-[#002B49]' : 'text-[#3A4A57]'}`}>{s.label}</span>
                     <span className="block text-[11px] text-[var(--muted)] mt-0.5">{s.sub}</span>
                   </span>
                 </button>
@@ -230,16 +231,6 @@ Rules:
 
         {/* ── Right content area ─────────────────────────────────────── */}
         <main className="flex-1 min-w-0 flex flex-col gap-8">
-          {/* Mobile step selector */}
-          <div className="md:hidden flex gap-2 flex-wrap">
-            {STEPS.map(s => (
-              <button key={s.n} onClick={() => setStep(s.n)}
-                className={`text-xs px-3 py-1.5 rounded-full border ${step === s.n ? 'bg-[#002B49] text-white border-[#002B49]' : 'border-[var(--hairline-strong)] text-[var(--muted)]'}`}>
-                {s.n}. {s.label}
-              </button>
-            ))}
-          </div>
-
           <div>
             <p className="eyebrow mb-1">{T('stepWord')} {step}</p>
             <h2 className="text-[22px] font-semibold text-[#002B49] tracking-tight">{STEPS[step - 1].label}</h2>
