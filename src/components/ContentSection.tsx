@@ -1,11 +1,40 @@
 'use client';
+import { useEffect, useRef } from 'react';
 import { useStore } from '@/lib/store';
-import { t, sectionLabel } from '@/lib/i18n';
+import { t } from '@/lib/i18n';
 import type { SectionDef, BulletItem } from '@/lib/types';
 import { Card } from './ui/Card';
 
 interface Props {
   def: SectionDef;
+}
+
+// Textarea that grows to fit its content — on typing AND when the value is
+// set programmatically (e.g. AI-generated points), so nothing is clipped and
+// no scrollbar (with its up/down arrows) ever appears.
+function AutoTextarea({ value, placeholder, onChange }: {
+  value: string;
+  placeholder?: string;
+  onChange: (v: string) => void;
+}) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+  const resize = () => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = el.scrollHeight + 'px';
+  };
+  useEffect(resize, [value]);
+  return (
+    <textarea
+      ref={ref}
+      rows={1}
+      value={value}
+      placeholder={placeholder}
+      onChange={e => onChange(e.target.value)}
+      className="field-input flex-1 min-h-[38px] resize-none overflow-hidden text-sm leading-relaxed"
+    />
+  );
 }
 
 export default function ContentSection({ def }: Props) {
@@ -57,23 +86,16 @@ export default function ContentSection({ def }: Props) {
               checked={item.c}
               title={T('titleItemCk')}
               onChange={e => updateItem(i, { c: e.target.checked })}
-              className="accent-[#002B49] w-4 h-4 mt-2 flex-none"
+              className="accent-[#002B49] w-4 h-4 mt-2.5 flex-none"
             />
-            <textarea
-              className="field-input flex-1 min-h-[38px] resize-none text-sm"
+            <AutoTextarea
               value={item.t}
-              rows={1}
               placeholder={def.ph}
-              onChange={e => updateItem(i, { t: e.target.value })}
-              onInput={e => {
-                const el = e.currentTarget;
-                el.style.height = 'auto';
-                el.style.height = el.scrollHeight + 'px';
-              }}
+              onChange={v => updateItem(i, { t: v })}
             />
             <button
               onClick={() => removeItem(i)}
-              className="text-[var(--faint)] hover:text-red-500 text-lg px-1 mt-1 flex-none"
+              className="text-[var(--faint)] hover:text-red-500 text-lg px-1 mt-1.5 flex-none"
             >✕</button>
           </div>
         ))}
