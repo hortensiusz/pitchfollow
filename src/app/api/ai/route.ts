@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 const API_KEY = process.env.ANTHROPIC_API_KEY ?? '';
-const MODEL = process.env.ANTHROPIC_MODEL ?? 'claude-sonnet-4-6';
+const MODEL = process.env.ANTHROPIC_MODEL ?? 'claude-opus-4-8';
 
 export async function POST(req: NextRequest) {
   if (!API_KEY) {
