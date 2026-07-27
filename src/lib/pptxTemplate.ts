@@ -29,6 +29,23 @@ const AREA = { x: 0.95, y: 1.55, w: 9.6, h: 4.95 };
 
 type QuoteRow = AppState['quote']['rows'][number];
 
+const CJK_RE = /[㐀-鿿぀-ヿ＀-￯]/;
+
+/** Rough rendered height (inches) of a bulleted list at a given size, so we can
+ *  shrink/split before text overflows the slide. CJK glyphs counted as wider. */
+function estBulletHeight(items: string[], w: number, fontSize: number, marginPt: number): number {
+  const lineH = (fontSize * 1.32) / 72;
+  const gap = marginPt / 72;
+  let h = 0;
+  for (const t of items) {
+    const glyphW = ((CJK_RE.test(t) ? 1.0 : 0.52) * fontSize) / 72;
+    const cpl = Math.max(6, Math.floor((w - 0.3) / glyphW)); // -0.3 for bullet indent
+    const lines = Math.max(1, Math.ceil((t.length || 1) / cpl));
+    h += lines * lineH + gap;
+  }
+  return h;
+}
+
 /** Group quote rows by their guide, preserving first-seen order. */
 function groupByGuide(rows: QuoteRow[]): Array<{ guide: string; rows: QuoteRow[] }> {
   const map = new Map<string, QuoteRow[]>();
@@ -94,8 +111,16 @@ export async function buildTemplatePptx(app: AppState, priceList: PriceItem[]): 
   });
 
   // ── Section body slide — editorial calm: a narrow, vertically-centred
-  // measure with generous leading and a bronze marker. No divider slides.
-  const addBodySlide = (title: string, items: string[], fontSize = 17, marginPt = 20) => {
+  // measure with generous leading. Font shrinks (and lists split across
+  // slides) so text always stays inside AREA, never over the heading/footer.
+  const addBodySlide = (title: string, items: string[], baseFont = 17, baseMargin = 20) => {
+    let fontSize = baseFont;
+    let marginPt = baseMargin;
+    while (fontSize > 11 && estBulletHeight(items, AREA.w, fontSize, marginPt) > AREA.h) {
+      fontSize -= 1;
+      marginPt = Math.max(8, Math.round(marginPt * 0.88));
+    }
+    const lineSpacing = fontSize >= 14 ? 1.3 : 1.2;
     pres.addSlide('tpl', SLIDE.body, (slide: any) => {
       setTitle(slide, title);
       slide.generate((p: any) => {
@@ -107,7 +132,8 @@ export async function buildTemplatePptx(app: AppState, priceList: PriceItem[]): 
           {
             x: AREA.x, y: AREA.y, w: AREA.w, h: AREA.h,
             fontSize, color: NAVY, fontFace: FONT, valign: 'middle',
-            paraSpaceAfter: marginPt, lineSpacingMultiple: 1.35,
+            paraSpaceAfter: marginPt, lineSpacingMultiple: lineSpacing,
+            fit: 'shrink', // backstop: PowerPoint shrinks if the estimate is off
           },
         );
       }, 'bullets');
@@ -116,11 +142,22 @@ export async function buildTemplatePptx(app: AppState, priceList: PriceItem[]): 
 
   const addSection = (title: string, items: string[]) => {
     if (!items.length) return;
-    for (let i = 0; i < items.length; i += 6) {
-      const chunk = items.slice(i, i + 6);
-      const suffix = items.length > 6 ? ` (${Math.floor(i / 6) + 1})` : '';
-      addBodySlide(title + suffix, chunk);
+    // Pack bullets onto slides so each fits at the 12pt floor; split if longer.
+    const chunks: string[][] = [];
+    let cur: string[] = [];
+    for (const it of items) {
+      if (cur.length && (cur.length >= 7 || estBulletHeight([...cur, it], AREA.w, 12, 10) > AREA.h)) {
+        chunks.push(cur);
+        cur = [it];
+      } else {
+        cur.push(it);
+      }
     }
+    if (cur.length) chunks.push(cur);
+    chunks.forEach((chunk, i) => {
+      const suffix = chunks.length > 1 ? ` (${i + 1})` : '';
+      addBodySlide(title + suffix, chunk);
+    });
   };
 
   // recap / needs / solution
@@ -190,6 +227,29 @@ export async function buildTemplatePptx(app: AppState, priceList: PriceItem[]): 
             const cardW = 5.75, gap = 0.5, cardY = 1.62, cardH = 4.78;
             const x1 = 0.69, x2 = x1 + cardW + gap;
 
+            // Size rows AND choose the footer style so items never overlap the
+            // footer. rowHAt() includes cell padding so the estimate matches
+            // what PowerPoint/LibreOffice actually render.
+            const itemsTop = cardY + 0.9;
+            const guideCount = groups.filter((g) => g.guide).length;
+            const rowCount = 1 + guideCount + rows.length; // year-header + guides + products
+            const rowHAt = (f: number) => (f * 1.32) / 72 + 0.09;
+            const fitsFont = (f: number, footerH: number) => rowHAt(f) * rowCount <= cardH - 0.9 - footerH - 0.08;
+            // Prefer the rich footer (per-year totals + note); if there are too
+            // many rows, drop to a compact footer to free vertical space.
+            let richFooter = true;
+            let itemFont = 10;
+            while (itemFont > 8 && !fitsFont(itemFont, 1.5)) itemFont--;
+            if (!fitsFont(itemFont, 1.5)) {
+              richFooter = false;
+              itemFont = 10;
+              while (itemFont > 7 && !fitsFont(itemFont, 0.85)) itemFont--;
+            }
+            const labelFont = Math.max(7, itemFont - 1.5);
+            const rowH = rowHAt(itemFont);
+            const c1FooterH = richFooter ? 1.02 : 0.62;
+            const c2FooterH = richFooter ? 1.5 : 0.9;
+
             // Grouped line-item rows for a card. `cols` = one entry per price
             // column (a year label + its price accessor). A year-header row is
             // emitted on top so each column's year is clear.
@@ -197,15 +257,15 @@ export async function buildTemplatePptx(app: AppState, priceList: PriceItem[]): 
               const nCol = cols.length + 1;
               const out: any[][] = [];
               out.push([
-                { text: '', options: { fontFace: FONT, fontSize: 8 } },
-                ...cols.map((c) => ({ text: c.label, options: { color: MUTED, bold: true, align: 'right', fontSize: 8.5, charSpacing: 1, fontFace: FONT, valign: 'bottom' } })),
+                { text: '', options: { fontFace: FONT, fontSize: labelFont } },
+                ...cols.map((c) => ({ text: c.label, options: { color: MUTED, bold: true, align: 'right', fontSize: labelFont, charSpacing: 1, fontFace: FONT, valign: 'bottom' } })),
               ]);
               for (const g of groups) {
                 if (g.guide) {
                   out.push([{
                     text: g.guide.toUpperCase(),
                     options: {
-                      colspan: nCol, color: BRONZE, bold: true, fontSize: 8.5, charSpacing: 2,
+                      colspan: nCol, color: BRONZE, bold: true, fontSize: labelFont, charSpacing: 2,
                       align: 'left', valign: 'middle', fontFace: FONT, fill: { color: CARD_BG },
                       border: [{ type: 'none' }, { type: 'none' }, { type: 'solid', color: BRONZE, pt: 0.5 }, { type: 'none' }],
                     },
@@ -213,8 +273,8 @@ export async function buildTemplatePptx(app: AppState, priceList: PriceItem[]): 
                 }
                 for (const r of g.rows) {
                   out.push([
-                    { text: cleanName(r), options: { color: NAVY, fontFace: FONT, align: 'left', fontSize: 10, valign: 'middle' } },
-                    ...cols.map((c) => ({ text: money(c.price(r)), options: { color: NAVY, fontFace: FONT, align: 'right', fontSize: 10, bold: true, valign: 'middle' } })),
+                    { text: cleanName(r), options: { color: NAVY, fontFace: FONT, align: 'left', fontSize: itemFont, valign: 'middle' } },
+                    ...cols.map((c) => ({ text: money(c.price(r)), options: { color: NAVY, fontFace: FONT, align: 'right', fontSize: itemFont, bold: true, valign: 'middle' } })),
                   ]);
                 }
               }
@@ -238,8 +298,8 @@ export async function buildTemplatePptx(app: AppState, priceList: PriceItem[]): 
                 p.addText(L('recommended'), { x: x + cardW - 2.0, y: cardY + 0.19, w: 1.72, h: 0.3, fontSize: 8, bold: true, color: NAVY, fill: { color: GOLD }, align: 'center', valign: 'middle', fontFace: FONT });
               }
               p.addTable(o.itemRows, {
-                x: x + 0.3, y: cardY + 0.9, w: cardW - 0.6, colW: o.colW,
-                rowH: 0.3, valign: 'middle', border: { type: 'solid', color: 'EEEBE3', pt: 0.5 },
+                x: x + 0.3, y: itemsTop, w: cardW - 0.6, colW: o.colW,
+                rowH, valign: 'middle', border: { type: 'solid', color: 'EEEBE3', pt: 0.5 }, autoPage: false,
               });
               o.footer();
             };
@@ -250,11 +310,13 @@ export async function buildTemplatePptx(app: AppState, priceList: PriceItem[]): 
               itemRows: buildRows([{ label: String(y1), price: rowOneNet }]),
               colW: [cardW - 0.6 - 1.6, 1.6],
               footer: () => {
-                const fy = cardY + cardH - 1.02;
+                const fy = cardY + cardH - c1FooterH;
                 p.addShape('rect', { x: x1 + 0.3, y: fy, w: cardW - 0.6, h: 0.012, fill: { color: BORDER }, line: { width: 0 } });
                 p.addText(L('annualTotal'), { x: x1 + 0.3, y: fy + 0.12, w: 2.8, h: 0.4, fontSize: 11, color: MUTED, fontFace: FONT, valign: 'middle' });
                 p.addText(money(y1Total), { x: x1 + cardW - 3.0, y: fy + 0.12, w: 2.7, h: 0.4, fontSize: 17, bold: true, color: NAVY, align: 'right', fontFace: FONT, valign: 'middle' });
-                p.addText(L('renewsNote'), { x: x1 + 0.3, y: fy + 0.58, w: cardW - 0.6, h: 0.28, fontSize: 9, italic: true, color: GRAY, fontFace: FONT });
+                if (richFooter) {
+                  p.addText(L('renewsNote'), { x: x1 + 0.3, y: fy + 0.58, w: cardW - 0.6, h: 0.28, fontSize: 9, italic: true, color: GRAY, fontFace: FONT });
+                }
               },
             });
 
@@ -265,21 +327,27 @@ export async function buildTemplatePptx(app: AppState, priceList: PriceItem[]): 
               itemRows: buildRows([{ label: String(y1), price: rowY1in2Net }, { label: String(y2), price: rowY2Net }]),
               colW: [cardW - 0.6 - 2.7, 1.35, 1.35],
               footer: () => {
-                const fy = cardY + cardH - 1.5;
+                const fy = cardY + cardH - c2FooterH;
                 p.addShape('rect', { x: x2 + 0.3, y: fy, w: cardW - 0.6, h: 0.012, fill: { color: BRONZE }, line: { width: 0 } });
-                p.addText(
-                  [
-                    { text: `${y1} ${L('totalWord')}  `, options: { fontSize: 10, color: MUTED } },
-                    { text: `${money(two1)}`, options: { fontSize: 10, bold: true, color: NAVY } },
-                    { text: `       ${y2} ${L('totalWord')}  `, options: { fontSize: 10, color: MUTED } },
-                    { text: `${money(two2)}`, options: { fontSize: 10, bold: true, color: NAVY } },
-                  ],
-                  { x: x2 + 0.3, y: fy + 0.1, w: cardW - 0.6, h: 0.3, fontFace: FONT, valign: 'middle' },
-                );
-                p.addText(L('twoYearTotal'), { x: x2 + 0.3, y: fy + 0.44, w: 2.8, h: 0.4, fontSize: 11, color: MUTED, fontFace: FONT, valign: 'middle' });
-                p.addText(money(twoTotal), { x: x2 + cardW - 3.0, y: fy + 0.44, w: 2.7, h: 0.4, fontSize: 17, bold: true, color: NAVY, align: 'right', fontFace: FONT, valign: 'middle' });
+                let yy = fy + 0.1;
+                if (richFooter) {
+                  // Per-year totals (redundant with the columns when compact, so dropped there)
+                  p.addText(
+                    [
+                      { text: `${y1} ${L('totalWord')}  `, options: { fontSize: 10, color: MUTED } },
+                      { text: `${money(two1)}`, options: { fontSize: 10, bold: true, color: NAVY } },
+                      { text: `       ${y2} ${L('totalWord')}  `, options: { fontSize: 10, color: MUTED } },
+                      { text: `${money(two2)}`, options: { fontSize: 10, bold: true, color: NAVY } },
+                    ],
+                    { x: x2 + 0.3, y: yy, w: cardW - 0.6, h: 0.3, fontFace: FONT, valign: 'middle' },
+                  );
+                  yy += 0.34;
+                }
+                p.addText(L('twoYearTotal'), { x: x2 + 0.3, y: yy, w: 2.8, h: 0.4, fontSize: 11, color: MUTED, fontFace: FONT, valign: 'middle' });
+                p.addText(money(twoTotal), { x: x2 + cardW - 3.0, y: yy, w: 2.7, h: 0.4, fontSize: 17, bold: true, color: NAVY, align: 'right', fontFace: FONT, valign: 'middle' });
+                yy += 0.48;
                 if (y1Saving > 0) {
-                  p.addText(L('savingNote').replace('{amt}', money(y1Saving)), { x: x2 + 0.3, y: fy + 0.92, w: cardW - 0.6, h: 0.3, fontSize: 9.5, bold: true, color: GREEN, fontFace: FONT, valign: 'middle' });
+                  p.addText(L('savingNote').replace('{amt}', money(y1Saving)), { x: x2 + 0.3, y: yy, w: cardW - 0.6, h: 0.3, fontSize: 9.5, bold: true, color: GREEN, fontFace: FONT, valign: 'middle' });
                 }
               },
             });
@@ -291,7 +359,17 @@ export async function buildTemplatePptx(app: AppState, priceList: PriceItem[]): 
             return;
           }
 
-          // ── Single-term table (1y or 2y), grouped by guide, vertically balanced
+          // ── Single-term table (1y or 2y), grouped by guide. Row height and
+          // font shrink so header + rows + total always fit above the footer.
+          const guideCount = groups.filter((g) => g.guide).length;
+          const rowsTotal = 1 + guideCount + rows.length + 1; // head + guides + products + total
+          const topLimit = 1.6;
+          const bottomLimit = 6.75 - (quote.note.trim() ? 0.45 : 0.1);
+          const availH = bottomLimit - topLimit;
+          const rowH = Math.max(0.2, Math.min(0.44, availH / rowsTotal));
+          const cellFont = rowH >= 0.4 ? 12.5 : rowH >= 0.34 ? 11.5 : rowH >= 0.28 ? 10.5 : rowH >= 0.23 ? 9.5 : 8.5;
+          const guideFont = Math.max(8, cellFont - 2);
+
           const th = (t: string, align: any = 'left') => ({
             text: t, options: { bold: true, color: 'FFFFFF', fill: { color: NAVY }, align, fontFace: FONT, valign: 'middle' },
           });
@@ -302,7 +380,7 @@ export async function buildTemplatePptx(app: AppState, priceList: PriceItem[]): 
           const guideRow = (g: string) => [{
             text: g.toUpperCase(),
             options: {
-              colspan: ncols, color: BRONZE, bold: true, fontSize: 9.5, charSpacing: 2,
+              colspan: ncols, color: BRONZE, bold: true, fontSize: guideFont, charSpacing: 2,
               align: 'left', valign: 'middle', fontFace: FONT, fill: { color: GHEAD },
               border: [{ type: 'none' }, { type: 'none' }, { type: 'solid', color: BRONZE, pt: 0.5 }, { type: 'none' }],
             },
@@ -327,17 +405,16 @@ export async function buildTemplatePptx(app: AppState, priceList: PriceItem[]): 
             colW = [7.2, 2.5, 2.5];
           }
 
-          const rowH = 0.44;
           const tableH = (body.length + 1) * rowH;
-          const startY = Math.max(1.55, 1.6 + (4.85 - tableH) / 2);
+          const startY = topLimit + Math.max(0, (availH - tableH) / 2);
           p.addTable([head, ...body], {
-            x: 0.55, y: startY, w: 12.2, colW, fontSize: 12.5, valign: 'middle',
+            x: 0.55, y: startY, w: 12.2, colW, fontSize: cellFont, valign: 'middle',
             border: { type: 'solid', color: BORDER, pt: 0.75 }, rowH, autoPage: false,
           });
 
           if (quote.note.trim()) {
             p.addText(quote.note, {
-              x: 0.55, y: Math.min(6.55, startY + tableH + 0.2), w: 12.2, h: 0.35, fontSize: 10, italic: true, color: GRAY, fontFace: FONT,
+              x: 0.55, y: Math.min(6.7, startY + tableH + 0.15), w: 12.2, h: 0.32, fontSize: 9.5, italic: true, color: GRAY, fontFace: FONT,
             });
           }
         }, 'quoteCards');
