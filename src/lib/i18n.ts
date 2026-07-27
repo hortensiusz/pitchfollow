@@ -43,7 +43,7 @@ export type I18nKey =
   | 'thanks' | 'uploadParsing'
   | 'stepWord' | 'navStep1' | 'navStep2' | 'navStep3' | 'navStep4'
   | 'navStep1Sub' | 'navStep2Sub' | 'navStep3Sub' | 'navStep4Sub' | 'step2Empty'
-  | 'btnGenComms' | 'commsHint';
+  | 'btnGenComms' | 'commsHint' | 'btnGenAll' | 'genAllHint';
 
 type I18nMap = Record<I18nKey, [string, string, string, string, string, string]>;
 
@@ -182,6 +182,8 @@ export const I18N: I18nMap = {
   step2Empty:        ['No AI content yet. Go to Step 1, paste meeting notes and generate the section points.', '暂无 AI 内容。请回到步骤 1，粘贴会议记录并生成各版块要点。', '尚無 AI 內容。請回到步驟 1，貼上會議記錄並產生各版塊要點。', 'Aucun contenu IA. Revenez à l\'étape 1, collez les notes et générez les points.', 'Noch kein KI-Inhalt. Gehen Sie zu Schritt 1, fügen Sie Notizen ein und generieren Sie die Punkte.', 'Sem conteúdo de IA. Volte à etapa 1, cole as notas e gere os tópicos.'],
   btnGenComms:       ['✨ Generate email & internal summary', '✨ 一键生成邮件和内部总结', '✨ 一鍵產生郵件和內部總結', '✨ Générer e-mail & résumé interne', '✨ E-Mail & interne Zusammenfassung erstellen', '✨ Gerar e-mail e resumo interno'],
   commsHint:         ['The follow-up email is in your selected language; the internal summary is always in English.', '跟进邮件使用所选语言；内部总结始终为英文。', '跟進郵件使用所選語言；內部總結始終為英文。', 'L\'e-mail de suivi est dans la langue choisie ; le résumé interne est toujours en anglais.', 'Die Follow-up-E-Mail ist in der gewählten Sprache; die interne Zusammenfassung immer auf Englisch.', 'O e-mail de acompanhamento está no idioma escolhido; o resumo interno é sempre em inglês.'],
+  btnGenAll:         ['✨ AI-generate points, email & summary', '✨ 一键生成要点、邮件与总结', '✨ 一鍵產生要點、郵件與總結', '✨ Générer points, e-mail & résumé', '✨ Punkte, E-Mail & Zusammenfassung', '✨ Gerar tópicos, e-mail e resumo'],
+  genAllHint:        ['One click: section bullet points, the client email and the internal summary. Re-run any time (e.g. after pricing) to refresh the email & summary.', '一键生成：各版块要点、客户邮件与内部总结。可随时重跑（如定价后）以刷新邮件与总结。', '一鍵產生：各版塊要點、客戶郵件與內部總結。可隨時重跑（如定價後）以刷新郵件與總結。', 'En un clic : points, e-mail client et résumé interne. Relancez à tout moment (après tarification) pour actualiser.', 'Ein Klick: Punkte, Kunden-E-Mail und interne Zusammenfassung. Jederzeit erneut ausführbar (z. B. nach der Preisgestaltung).', 'Um clique: tópicos, e-mail do cliente e resumo interno. Execute novamente quando quiser (após precificar).'],
 };
 
 const LANG_IDX: Record<LangCode, number> = { en: 0, zh: 1, zhTW: 2, fr: 3, de: 4, ptBR: 5 };

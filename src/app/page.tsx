@@ -24,7 +24,6 @@ export default function Home() {
 
   const [step, setStep] = useState(1);
   const [comms, setComms] = useState<CommsOut>({ summary: null, email: null });
-  const [commsBusy, setCommsBusy] = useState(false);
   const [genBusy, setGenBusy] = useState(false);
   const [extractBusy, setExtractBusy] = useState(false);
 
@@ -55,14 +54,28 @@ export default function Home() {
     return L.join('\n');
   }, [app]);
 
-  const genSections = async () => {
+  // One-click: generate section bullet points + the client email + the
+  // internal summary together. If section content already exists, ask before
+  // overwriting it — but the email & summary always refresh (so this doubles
+  // as a "refresh comms after pricing" action).
+  const genAll = async () => {
     if (!app.notes.trim()) { alert(T('alertNoNotes')); return; }
+    const fromStep = step;
     const hasContent = SECTION_DEFS.some(d => app.secs[d.id]?.items.length);
-    if (hasContent && !confirm(T('confirmOverwrite'))) return;
+    const regenSections = !hasContent || confirm(T('confirmOverwrite'));
+
     setGenBusy(true);
+    setComms({
+      summary: { hint: T('sumHintCalling'), content: '' },
+      email: { hint: T('sumHintCalling'), content: ['', '', ''] },
+    });
+
     const OUT: Record<string, string> = { en: 'English', zh: '简体中文', zhTW: '繁體中文', fr: 'French (français)', de: 'German (Deutsch)', ptBR: 'Brazilian Portuguese (português do Brasil)' };
     const outLang = OUT[app.lang] || 'English';
-    const sys = `You are writing slide bullet points for a client-facing follow-up presentation from Chambers (a legal intelligence firm). The audience is the client — write directly TO them, as if the slide deck is addressed to their firm.
+    const ctx = collectContext();
+    const notes = app.notes.trim();
+
+    const secSys = `You are writing slide bullet points for a client-facing follow-up presentation from Chambers (a legal intelligence firm). The audience is the client — write directly TO them, as if the slide deck is addressed to their firm.
 
 Rules:
 - Address the client as "you" / "your firm" / "your team" — never refer to them in the third person
@@ -72,23 +85,48 @@ Rules:
 - Generate 2–5 bullets per section
 - Output ONLY valid JSON, no code fences, no explanation
 - All text must be in ${outLang}`;
-    const user = `Meeting notes:\n${app.notes}\n\nGenerate client-facing slide bullets as JSON:\n{"recap":[],"needs":[],"solution":[],"next":[]}\nrecap = what was discussed (framed for the client's benefit); needs = your firm's key requirements and challenges; solution = how Chambers addresses your needs; next = agreed next steps`;
-    try {
-      const d = parseAiJson(await aiComplete(sys, user)) as Record<string, unknown>;
-      let filled = 0;
-      SECTION_DEFS.forEach(def => {
-        const arr = d[def.id];
-        if (Array.isArray(arr) && arr.length) {
-          setSectionItems(def.id, arr.map((v: string) => ({ t: String(v), c: true })));
-          setSection(def.id, { inc: true });
-          filled++;
-        }
-      });
-      saveState();
-      setStatus(T('genSecDone').replace('{n}', String(filled)));
-      if (filled) setStep(2); // advance to review the AI-extracted content
-    } catch (err: any) { alert(T('genFail') + err.message); }
-    finally { setGenBusy(false); }
+    const secUser = `Meeting notes:\n${notes}\n\nGenerate client-facing slide bullets as JSON:\n{"recap":[],"needs":[],"solution":[],"next":[]}\nrecap = what was discussed (framed for the client's benefit); needs = your firm's key requirements and challenges; solution = how Chambers addresses your needs; next = agreed next steps`;
+
+    const sumSys = 'You are a Chambers sales team assistant writing a concise internal follow-up record in UK English. Base only on the provided material. Distinguish confirmed/pending/risk. Format for CRM archiving. Never fabricate quotes, facts, or contact details.';
+    const sumUser = `Write an internal follow-up summary.\nStructure: 1) Overview (2-3 sentences) 2) Client needs & concerns 3) Our proposed solution & quote highlights 4) Next actions (owners & deadlines; mark TBC if unknown) 5) Risks & notes.\n\n=== Structured data ===\n${ctx}\n\n=== Meeting notes ===\n${notes || '(not provided)'}`;
+
+    const emSys = `You are a Chambers (legal intelligence firm) sales advisor writing a post-meeting client follow-up email. Generate THREE distinct versions:\n=== Version 1 — Short, sharp & sweet ===\n=== Version 2 — Conversational ===\n=== Version 3 — Professional & structured ===\nAll three in ${outLang}. Each must include: Subject:, greeting, thanks, recap, solution/quote highlights, next steps, sign-off. Base only on provided material. Never fabricate facts or prices. Output only the three versions with the === headers above.`;
+    const emUser = `=== Structured data ===\n${ctx}\n\n=== Meeting notes ===\n${notes || '(not provided)'}`;
+
+    const [secRes, sumRes, emRes] = await Promise.allSettled([
+      regenSections ? aiComplete(secSys, secUser) : Promise.resolve(''),
+      aiComplete(sumSys, sumUser),
+      aiComplete(emSys, emUser),
+    ]);
+
+    let filled = 0;
+    if (regenSections && secRes.status === 'fulfilled') {
+      try {
+        const d = parseAiJson(secRes.value) as Record<string, unknown>;
+        SECTION_DEFS.forEach(def => {
+          const arr = d[def.id];
+          if (Array.isArray(arr) && arr.length) {
+            setSectionItems(def.id, arr.map((v: string) => ({ t: String(v), c: true })));
+            setSection(def.id, { inc: true });
+            filled++;
+          }
+        });
+      } catch { /* leave sections untouched on parse failure */ }
+    }
+
+    setComms({
+      summary: sumRes.status === 'fulfilled'
+        ? { hint: T('sumHintDone'), content: sumRes.value.trim() }
+        : { hint: T('sumHintFail') + (sumRes.reason?.message ?? ''), content: '' },
+      email: emRes.status === 'fulfilled'
+        ? { hint: T('emailHintDone'), content: parseEmailVersions(emRes.value) }
+        : { hint: T('sumHintFail') + (emRes.reason?.message ?? ''), content: ['', '', ''] },
+    });
+
+    saveState();
+    setGenBusy(false);
+    setStatus(T('genSecDone').replace('{n}', String(filled)));
+    if (regenSections && filled && fromStep === 1) setStep(2);
   };
 
   const extractContacts = async () => {
@@ -123,41 +161,6 @@ Rules:
       }
     } else vs[0] = out.trim();
     return vs;
-  };
-
-  // One click → generate BOTH the internal summary (always UK English) and the
-  // client follow-up email (selected language), shown together.
-  const genComms = async () => {
-    const ctx = collectContext();
-    const notes = app.notes.trim();
-    setCommsBusy(true);
-    setComms({
-      summary: { hint: T('sumHintCalling'), content: '' },
-      email: { hint: T('sumHintCalling'), content: ['', '', ''] },
-    });
-
-    const sumSys = 'You are a Chambers sales team assistant writing a concise internal follow-up record in UK English. Base only on the provided material. Distinguish confirmed/pending/risk. Format for CRM archiving. Never fabricate quotes, facts, or contact details.';
-    const sumUser = `Write an internal follow-up summary.\nStructure: 1) Overview (2-3 sentences) 2) Client needs & concerns 3) Our proposed solution & quote highlights 4) Next actions (owners & deadlines; mark TBC if unknown) 5) Risks & notes.\n\n=== Structured data ===\n${ctx}\n\n=== Meeting notes ===\n${notes || '(not provided)'}`;
-
-    const OUT: Record<string, string> = { en: 'English', zh: '简体中文', zhTW: '繁體中文', fr: 'French (français)', de: 'German (Deutsch)', ptBR: 'Brazilian Portuguese (português do Brasil)' };
-    const outLang = OUT[app.lang] || 'English';
-    const emSys = `You are a Chambers (legal intelligence firm) sales advisor writing a post-meeting client follow-up email. Generate THREE distinct versions:\n=== Version 1 — Short, sharp & sweet ===\n=== Version 2 — Conversational ===\n=== Version 3 — Professional & structured ===\nAll three in ${outLang}. Each must include: Subject:, greeting, thanks, recap, solution/quote highlights, next steps, sign-off. Base only on provided material. Never fabricate facts or prices. Output only the three versions with the === headers above.`;
-    const emUser = `=== Structured data ===\n${ctx}\n\n=== Meeting notes ===\n${notes || '(not provided)'}`;
-
-    const [sumRes, emRes] = await Promise.allSettled([
-      aiComplete(sumSys, sumUser),
-      aiComplete(emSys, emUser),
-    ]);
-
-    setComms({
-      summary: sumRes.status === 'fulfilled'
-        ? { hint: T('sumHintDone'), content: sumRes.value.trim() }
-        : { hint: T('sumHintFail') + (sumRes.reason?.message ?? ''), content: '' },
-      email: emRes.status === 'fulfilled'
-        ? { hint: T('emailHintDone'), content: parseEmailVersions(emRes.value) }
-        : { hint: T('sumHintFail') + (emRes.reason?.message ?? ''), content: ['', '', ''] },
-    });
-    setCommsBusy(false);
   };
 
   const exportPPT = async () => {
@@ -241,7 +244,7 @@ Rules:
           {step === 1 && (
             <>
               <BasicInfoSection onExtractContacts={extractContacts} extractBusy={extractBusy} />
-              <MeetingNotesSection onGenSections={genSections} genBusy={genBusy} />
+              <MeetingNotesSection onGenSections={genAll} genBusy={genBusy} />
             </>
           )}
 
@@ -266,10 +269,10 @@ Rules:
           {step === 4 && (
             <>
               <div className="flex flex-wrap gap-3 items-center">
-                <button onClick={genComms} disabled={commsBusy} className="btn-primary text-sm disabled:opacity-50">
-                  {T('btnGenComms')}
+                <button onClick={genAll} disabled={genBusy} className="btn-primary text-sm disabled:opacity-50">
+                  {T('btnGenAll')}
                 </button>
-                {commsBusy
+                {genBusy
                   ? <span className="text-xs text-[var(--accent)] font-medium animate-pulse">{T('btnGenerating')}</span>
                   : <span className="text-xs text-[var(--muted)]">{T('commsHint')}</span>}
               </div>

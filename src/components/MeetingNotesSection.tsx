@@ -92,11 +92,11 @@ export default function MeetingNotesSection({ onGenSections, genBusy }: Props) {
               {uploading ? T('uploadParsing') : T('uploadNotes')}
             </button>
             <button onClick={onGenSections} disabled={genBusy} className="btn-primary text-sm disabled:opacity-50">
-              {T('btnGenSec')}
+              {T('btnGenAll')}
             </button>
             {genBusy
               ? <span className="text-xs text-[var(--accent)] font-medium animate-pulse">{T('btnGenerating')}</span>
-              : <span className="text-xs text-[var(--muted)]">{T('hintNotes')}</span>}
+              : <span className="text-xs text-[var(--muted)]">{T('genAllHint')}</span>}
           </div>
         </div>
       </details>
