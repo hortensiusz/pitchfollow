@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useStore } from '@/lib/store';
 import { t, SECTION_DEFS } from '@/lib/i18n';
-import { aiComplete, parseAiJson } from '@/lib/aiService';
+import { aiComplete, parseAiJson, tidyText } from '@/lib/aiService';
 
 import AppHeader from '@/components/AppHeader';
 import BasicInfoSection from '@/components/BasicInfoSection';
@@ -87,10 +87,10 @@ Rules:
 - All text must be in ${outLang}`;
     const secUser = `Meeting notes:\n${notes}\n\nGenerate client-facing slide bullets as JSON:\n{"recap":[],"needs":[],"solution":[],"next":[]}\nrecap = what was discussed (framed for the client's benefit); needs = your firm's key requirements and challenges; solution = how Chambers addresses your needs; next = agreed next steps`;
 
-    const sumSys = 'You are a Chambers sales team assistant writing a concise internal follow-up record in UK English. Base only on the provided material. Distinguish confirmed/pending/risk. Format for CRM archiving. Never fabricate quotes, facts, or contact details.';
+    const sumSys = 'You are a Chambers sales team assistant writing a concise internal follow-up record in UK English. Base only on the provided material. Distinguish confirmed/pending/risk. Format for CRM archiving. Never fabricate quotes, facts, or contact details.\n\nOutput PLAIN TEXT ready to paste into a CRM or email — NO Markdown: do not use #, *, **, backticks, tables or horizontal rules. Write each section as a plain heading followed by a colon, then its content; use simple "-" for any bullet points.';
     const sumUser = `Write an internal follow-up summary.\nStructure: 1) Overview (2-3 sentences) 2) Client needs & concerns 3) Our proposed solution & quote highlights 4) Next actions (owners & deadlines; mark TBC if unknown) 5) Risks & notes.\n\n=== Structured data ===\n${ctx}\n\n=== Meeting notes ===\n${notes || '(not provided)'}`;
 
-    const emSys = `You are a Chambers (legal intelligence firm) sales advisor writing a post-meeting client follow-up email. Generate THREE distinct versions:\n=== Version 1 — Short, sharp & sweet ===\n=== Version 2 — Conversational ===\n=== Version 3 — Professional & structured ===\nAll three in ${outLang}. Each must include: Subject:, greeting, thanks, recap, solution/quote highlights, next steps, sign-off. Base only on provided material. Never fabricate facts or prices. Output only the three versions with the === headers above.`;
+    const emSys = `You are a Chambers (legal intelligence firm) sales advisor writing a post-meeting client follow-up email. Generate THREE distinct versions:\n=== Version 1 — Short, sharp & sweet ===\n=== Version 2 — Conversational ===\n=== Version 3 — Professional & structured ===\nAll three in ${outLang}. Each must include: Subject:, greeting, thanks, recap, solution/quote highlights, next steps, sign-off. Base only on provided material. Never fabricate facts or prices. Write plain email text — NO Markdown (no #, *, **, backticks). Output only the three versions with the === headers above.`;
     const emUser = `=== Structured data ===\n${ctx}\n\n=== Meeting notes ===\n${notes || '(not provided)'}`;
 
     const [secRes, sumRes, emRes] = await Promise.allSettled([
@@ -116,10 +116,10 @@ Rules:
 
     setComms({
       summary: sumRes.status === 'fulfilled'
-        ? { hint: T('sumHintDone'), content: sumRes.value.trim() }
+        ? { hint: T('sumHintDone'), content: tidyText(sumRes.value) }
         : { hint: T('sumHintFail') + (sumRes.reason?.message ?? ''), content: '' },
       email: emRes.status === 'fulfilled'
-        ? { hint: T('emailHintDone'), content: parseEmailVersions(emRes.value) }
+        ? { hint: T('emailHintDone'), content: parseEmailVersions(emRes.value).map(tidyText) as [string, string, string] }
         : { hint: T('sumHintFail') + (emRes.reason?.message ?? ''), content: ['', '', ''] },
     });
 

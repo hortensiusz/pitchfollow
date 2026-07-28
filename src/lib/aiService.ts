@@ -16,6 +16,24 @@ export function isAiConfigured(): boolean {
   return true;
 }
 
+// Strip Markdown so AI output pastes cleanly into email/CRM as plain text:
+// removes #, **, *, `code`, fences and --- rules; turns list markers into "•".
+export function tidyText(raw: string): string {
+  const lines = raw.replace(/\r\n/g, '\n').split('\n')
+    .filter(l => !/^\s*([-*_]\s*){3,}$/.test(l))          // drop horizontal rules
+    .map(l => l
+      .replace(/^\s{0,3}#{1,6}\s+/, '')                    // heading markers → plain
+      .replace(/^(\s*)[*+-]\s+/, '$1• '));                 // list bullets → •
+  let out = lines.join('\n');
+  out = out.replace(/```[a-z]*\n?/gi, '');                 // code fences
+  out = out.replace(/`([^`]+)`/g, '$1');                   // inline code
+  out = out.replace(/(\*\*|__)([\s\S]*?)\1/g, '$2');       // **bold** / __bold__
+  out = out.replace(/\*([^*\n]+)\*/g, '$1');               // *italic*
+  out = out.replace(/\*\*/g, '');                          // stray markers
+  out = out.replace(/\n{3,}/g, '\n\n').trim();             // collapse blank lines
+  return out;
+}
+
 // Robustly parse JSON from AI output.
 // Handles: code fences, literal control chars in strings, trailing commas, surrounding prose.
 export function parseAiJson(raw: string): unknown {
