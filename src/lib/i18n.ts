@@ -43,7 +43,7 @@ export type I18nKey =
   | 'thanks' | 'uploadParsing'
   | 'stepWord' | 'navStep1' | 'navStep2' | 'navStep3' | 'navStep4'
   | 'navStep1Sub' | 'navStep2Sub' | 'navStep3Sub' | 'navStep4Sub' | 'step2Empty'
-  | 'btnGenComms' | 'commsHint' | 'btnGenAll' | 'genAllHint';
+  | 'btnGenComms' | 'commsHint' | 'btnGenAll' | 'genAllHint' | 'step4Empty';
 
 type I18nMap = Record<I18nKey, [string, string, string, string, string, string]>;
 
@@ -184,6 +184,7 @@ export const I18N: I18nMap = {
   commsHint:         ['The follow-up email is in your selected language; the internal summary is always in English.', '跟进邮件使用所选语言；内部总结始终为英文。', '跟進郵件使用所選語言；內部總結始終為英文。', 'L\'e-mail de suivi est dans la langue choisie ; le résumé interne est toujours en anglais.', 'Die Follow-up-E-Mail ist in der gewählten Sprache; die interne Zusammenfassung immer auf Englisch.', 'O e-mail de acompanhamento está no idioma escolhido; o resumo interno é sempre em inglês.'],
   btnGenAll:         ['✨ AI-generate points, email & summary', '✨ 一键生成要点、邮件与总结', '✨ 一鍵產生要點、郵件與總結', '✨ Générer points, e-mail & résumé', '✨ Punkte, E-Mail & Zusammenfassung', '✨ Gerar tópicos, e-mail e resumo'],
   genAllHint:        ['One click: section bullet points, the client email and the internal summary. Re-run any time (e.g. after pricing) to refresh the email & summary.', '一键生成：各版块要点、客户邮件与内部总结。可随时重跑（如定价后）以刷新邮件与总结。', '一鍵產生：各版塊要點、客戶郵件與內部總結。可隨時重跑（如定價後）以刷新郵件與總結。', 'En un clic : points, e-mail client et résumé interne. Relancez à tout moment (après tarification) pour actualiser.', 'Ein Klick: Punkte, Kunden-E-Mail und interne Zusammenfassung. Jederzeit erneut ausführbar (z. B. nach der Preisgestaltung).', 'Um clique: tópicos, e-mail do cliente e resumo interno. Execute novamente quando quiser (após precificar).'],
+  step4Empty:        ['Generate these in Step 1 with "AI-generate points, email & summary" — the email and internal summary will appear here.', '请在步骤 1 点击「一键生成要点、邮件与总结」，邮件与内部总结将显示在此。', '請在步驟 1 點擊「一鍵產生要點、郵件與總結」，郵件與內部總結將顯示在此。', 'Générez-les à l\'étape 1 avec « Générer points, e-mail & résumé » — ils apparaîtront ici.', 'In Schritt 1 über „Punkte, E-Mail & Zusammenfassung" erzeugen — sie erscheinen hier.', 'Gere na etapa 1 com "Gerar tópicos, e-mail e resumo" — aparecerão aqui.'],
 };
 
 const LANG_IDX: Record<LangCode, number> = { en: 0, zh: 1, zhTW: 2, fr: 3, de: 4, ptBR: 5 };

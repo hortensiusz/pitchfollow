@@ -268,14 +268,9 @@ Rules:
 
           {step === 4 && (
             <>
-              <div className="flex flex-wrap gap-3 items-center">
-                <button onClick={genAll} disabled={genBusy} className="btn-primary text-sm disabled:opacity-50">
-                  {T('btnGenAll')}
-                </button>
-                {genBusy
-                  ? <span className="text-xs text-[var(--accent)] font-medium animate-pulse">{T('btnGenerating')}</span>
-                  : <span className="text-xs text-[var(--muted)]">{T('commsHint')}</span>}
-              </div>
+              {genBusy && (
+                <span className="text-xs text-[var(--accent)] font-medium animate-pulse">{T('btnGenerating')}</span>
+              )}
               {comms.email && (
                 <OutputPanel kind="email" title={T('emailTitle')} hint={comms.email.hint}
                   content={comms.email.content}
@@ -285,6 +280,12 @@ Rules:
                 <OutputPanel kind="summary" title={T('sumTitleGen')} hint={comms.summary.hint}
                   content={comms.summary.content}
                   onClose={() => setComms(c => ({ ...c, summary: null }))} />
+              )}
+              {!genBusy && !comms.email && !comms.summary && (
+                <div className="rounded-md border border-dashed border-[var(--hairline-strong)] bg-[var(--surface)] px-6 py-10 text-center">
+                  <p className="text-sm text-[var(--muted)] max-w-md mx-auto">{T('step4Empty')}</p>
+                  <button onClick={() => setStep(1)} className="btn-ghost text-sm mt-4">← {T('navStep1')}</button>
+                </div>
               )}
             </>
           )}
