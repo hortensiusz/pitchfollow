@@ -221,7 +221,6 @@ export async function buildTemplatePptx(app: AppState, priceList: PriceItem[]): 
             const y1Total = gdVat(sumRows(rowOneNet));
             const two1 = gdVat(sumRows(rowY1in2Net));
             const two2 = gdVat(sumRows(rowY2Net));
-            const twoTotal = two1 + two2;
             const y1Saving = Math.max(0, y1Total - two1);
 
             const cardW = 5.75, gap = 0.5, cardY = 1.62, cardH = 4.78;
@@ -329,23 +328,30 @@ export async function buildTemplatePptx(app: AppState, priceList: PriceItem[]): 
               footer: () => {
                 const fy = cardY + cardH - c2FooterH;
                 p.addShape('rect', { x: x2 + 0.3, y: fy, w: cardW - 0.6, h: 0.012, fill: { color: BRONZE }, line: { width: 0 } });
-                let yy = fy + 0.1;
+                // Per-year totals shown separately — no combined 2-year sum.
+                const totLbl = (yr: number) => `${yr} ${L('totalWord')}`;
+                let yy = fy + 0.12;
                 if (richFooter) {
-                  // Per-year totals (redundant with the columns when compact, so dropped there)
+                  // Two stacked, emphasised year totals
+                  p.addText(totLbl(y1), { x: x2 + 0.3, y: yy, w: 2.6, h: 0.34, fontSize: 11, color: MUTED, fontFace: FONT, valign: 'middle' });
+                  p.addText(money(two1), { x: x2 + cardW - 3.0, y: yy, w: 2.7, h: 0.34, fontSize: 15, bold: true, color: NAVY, align: 'right', fontFace: FONT, valign: 'middle' });
+                  yy += 0.36;
+                  p.addText(totLbl(y2), { x: x2 + 0.3, y: yy, w: 2.6, h: 0.34, fontSize: 11, color: MUTED, fontFace: FONT, valign: 'middle' });
+                  p.addText(money(two2), { x: x2 + cardW - 3.0, y: yy, w: 2.7, h: 0.34, fontSize: 15, bold: true, color: NAVY, align: 'right', fontFace: FONT, valign: 'middle' });
+                  yy += 0.42;
+                } else {
+                  // Compact: both year totals on one line
                   p.addText(
                     [
-                      { text: `${y1} ${L('totalWord')}  `, options: { fontSize: 10, color: MUTED } },
-                      { text: `${money(two1)}`, options: { fontSize: 10, bold: true, color: NAVY } },
-                      { text: `       ${y2} ${L('totalWord')}  `, options: { fontSize: 10, color: MUTED } },
-                      { text: `${money(two2)}`, options: { fontSize: 10, bold: true, color: NAVY } },
+                      { text: `${totLbl(y1)}  `, options: { fontSize: 10, color: MUTED } },
+                      { text: `${money(two1)}`, options: { fontSize: 12, bold: true, color: NAVY } },
+                      { text: `      ${totLbl(y2)}  `, options: { fontSize: 10, color: MUTED } },
+                      { text: `${money(two2)}`, options: { fontSize: 12, bold: true, color: NAVY } },
                     ],
-                    { x: x2 + 0.3, y: yy, w: cardW - 0.6, h: 0.3, fontFace: FONT, valign: 'middle' },
+                    { x: x2 + 0.3, y: yy, w: cardW - 0.6, h: 0.34, fontFace: FONT, valign: 'middle' },
                   );
-                  yy += 0.34;
+                  yy += 0.38;
                 }
-                p.addText(L('twoYearTotal'), { x: x2 + 0.3, y: yy, w: 2.8, h: 0.4, fontSize: 11, color: MUTED, fontFace: FONT, valign: 'middle' });
-                p.addText(money(twoTotal), { x: x2 + cardW - 3.0, y: yy, w: 2.7, h: 0.4, fontSize: 17, bold: true, color: NAVY, align: 'right', fontFace: FONT, valign: 'middle' });
-                yy += 0.48;
                 if (y1Saving > 0) {
                   p.addText(L('savingNote').replace('{amt}', money(y1Saving)), { x: x2 + 0.3, y: yy, w: cardW - 0.6, h: 0.3, fontSize: 9.5, bold: true, color: GREEN, fontFace: FONT, valign: 'middle' });
                 }
