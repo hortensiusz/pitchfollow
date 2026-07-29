@@ -126,7 +126,7 @@ Rules:
     saveState();
     setGenBusy(false);
     setStatus(T('genSecDone').replace('{n}', String(filled)));
-    if (regenSections && filled && fromStep === 1) setStep(2);
+    if (regenSections && filled && fromStep === 2) setStep(3); // notes → AI content
   };
 
   const extractContacts = async () => {
@@ -193,10 +193,10 @@ Rules:
   };
 
   const STEPS = [
-    { n: 1, label: T('navStep1'), sub: T('navStep1Sub') },
-    { n: 2, label: T('navStep2'), sub: T('navStep2Sub') },
-    { n: 3, label: T('navStep3'), sub: T('navStep3Sub') },
-    { n: 4, label: T('navStep4'), sub: T('navStep4Sub') },
+    { n: 1, label: T('navStep3'), sub: T('navStep3Sub') }, // Calculator & proposal
+    { n: 2, label: T('navStep1'), sub: T('navStep1Sub') }, // Basics & meeting notes
+    { n: 3, label: T('navStep2'), sub: T('navStep2Sub') }, // AI-generated points
+    { n: 4, label: T('navStep4'), sub: T('navStep4Sub') }, // Email & summary
   ];
   const hasSections = SECTION_DEFS.some(d => app.secs[d.id]?.items.length);
 
@@ -243,27 +243,27 @@ Rules:
 
           {step === 1 && (
             <>
+              <CalcSection />
+              <QuoteSection />
+            </>
+          )}
+
+          {step === 2 && (
+            <>
               <BasicInfoSection onExtractContacts={extractContacts} extractBusy={extractBusy} />
               <MeetingNotesSection onGenSections={genAll} genBusy={genBusy} />
             </>
           )}
 
-          {step === 2 && (
+          {step === 3 && (
             hasSections
               ? SECTION_DEFS.map(def => <ContentSection key={def.id} def={def} />)
               : (
                 <div className="rounded-md border border-dashed border-[var(--hairline-strong)] bg-[var(--surface)] px-6 py-10 text-center">
                   <p className="text-sm text-[var(--muted)] max-w-md mx-auto">{T('step2Empty')}</p>
-                  <button onClick={() => setStep(1)} className="btn-ghost text-sm mt-4">← {T('navStep1')}</button>
+                  <button onClick={() => setStep(2)} className="btn-ghost text-sm mt-4">← {T('navStep1')}</button>
                 </div>
               )
-          )}
-
-          {step === 3 && (
-            <>
-              <CalcSection />
-              <QuoteSection />
-            </>
           )}
 
           {step === 4 && (
@@ -284,7 +284,7 @@ Rules:
               {!genBusy && !comms.email && !comms.summary && (
                 <div className="rounded-md border border-dashed border-[var(--hairline-strong)] bg-[var(--surface)] px-6 py-10 text-center">
                   <p className="text-sm text-[var(--muted)] max-w-md mx-auto">{T('step4Empty')}</p>
-                  <button onClick={() => setStep(1)} className="btn-ghost text-sm mt-4">← {T('navStep1')}</button>
+                  <button onClick={() => setStep(2)} className="btn-ghost text-sm mt-4">← {T('navStep1')}</button>
                 </div>
               )}
             </>
