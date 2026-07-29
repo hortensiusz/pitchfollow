@@ -311,7 +311,7 @@ export async function buildTemplatePptx(app: AppState, priceList: PriceItem[]): 
               footer: () => {
                 const fy = cardY + cardH - c1FooterH;
                 p.addShape('rect', { x: x1 + 0.3, y: fy, w: cardW - 0.6, h: 0.012, fill: { color: BORDER }, line: { width: 0 } });
-                p.addText(L('annualTotal'), { x: x1 + 0.3, y: fy + 0.12, w: 2.8, h: 0.4, fontSize: 11, color: MUTED, fontFace: FONT, valign: 'middle' });
+                p.addText(`${y1} ${L('totalWord')}`, { x: x1 + 0.3, y: fy + 0.12, w: 2.8, h: 0.4, fontSize: 11, color: MUTED, fontFace: FONT, valign: 'middle' });
                 p.addText(money(y1Total), { x: x1 + cardW - 3.0, y: fy + 0.12, w: 2.7, h: 0.4, fontSize: 17, bold: true, color: NAVY, align: 'right', fontFace: FONT, valign: 'middle' });
                 if (richFooter) {
                   p.addText(L('renewsNote'), { x: x1 + 0.3, y: fy + 0.58, w: cardW - 0.6, h: 0.28, fontSize: 9, italic: true, color: GRAY, fontFace: FONT });
